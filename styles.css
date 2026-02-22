@@ -177,10 +177,10 @@ select {
   height: 100%;
   min-height: 700px;
   background: #000;
-  border-radius: 0;
+  border-radius: 16px;
   overflow: hidden;
   scroll-snap-align: start;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   margin: 0;
 }
 
@@ -197,7 +197,7 @@ select {
   left: 0;
   right: 0;
   padding: 2rem 1.5rem;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -741,8 +741,13 @@ select {
 
 .auth-subtitle {
   color: var(--muted);
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   font-size: 0.9rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+  text-align: left;
 }
 
 .phone-input-wrapper {
@@ -771,7 +776,7 @@ select {
 
 /* Social Proof Ticker */
 .social-proof-ticker {
-  margin-top: 3rem;
+  margin-top: 1.5rem;
   width: 100%;
   overflow: hidden;
   position: relative;
@@ -843,7 +848,7 @@ select {
 
 /* Skeleton Loaders */
 .skeleton-card {
-  background: linear-gradient(135deg, var(--surface-2) 25%, #333 50%, var(--surface-2) 75%);
+  background: linear-gradient(45deg, var(--surface-2) 25%, #333 50%, var(--surface-2) 75%);
   background-size: 400% 100%;
   border-radius: 8px;
   height: 300px;
@@ -926,13 +931,12 @@ select {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: rgba(18, 18, 18, 0.8);
+  background: rgba(255, 215, 0, 0.1);
   backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  /* --line */
+  border: 1px solid rgba(255, 215, 0, 0.3);
   color: var(--brand-gold);
   padding: 0.5rem 0.8rem;
-  border-radius: 8px;
+  border-radius: 999px;
   font-family: 'Inter', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;

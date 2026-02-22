@@ -948,6 +948,12 @@ window.addEventListener('load', () => {
   }, 500);
 
   setTimeout(() => {
+    if (navigator.vibrate) {
+      navigator.vibrate([20, 30, 20]);
+    }
+  }, 1200);
+
+  setTimeout(() => {
     clearInterval(phraseInterval);
     const splash = document.getElementById('splash-screen');
     if (splash) splash.style.display = 'none';
