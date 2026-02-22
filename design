@@ -1,0 +1,53 @@
+Role: You are a Lead Product Engineer. You are building Kalakar, a high-stakes professional platform for the Indian film industry. Your work must reflect the "Antigravity" philosophy: eliminating friction while building deep emotional resonance.
+
+Objective: Implement the "Product Look" and "High-Agency Flow" for Kalakar using a Brand-Utility Split and Cinematic Noir design system.
+
+Task: Develop the following components and styling logic based on these exact specifications:
+
+1. Global Visual Tokens (The Cinematic Noir)
+Set up the design system with these CSS tokens:
+
+Surfaces: Background #121212 (Main); Surface #1E1E1E (Cards/Widgets).
+
+Accents: #FFD700 (Production Gold) for Conversion Actions only; #10B981 (Ayurvedic Green) for Success/Verified states.
+
+Geometry: 12px radius for widgets; 16px for Talent Profile cards.
+
+Borders: 1px solid rgba(255, 255, 255, 0.08) for dark-mode depth.
+
+2. The Typography Strategy (Emotional vs. Functional)
+Emotional UI (Brand): Use the Marathi-resemblance font for the Splash screen and "Empty States."
+
+Animation: Implement the Shirorekha (headstroke) as an animated SVG path with a 1.2s stroke-dasharray transition from left to right.
+
+Execution UI (Interface): Use Inter or PP Neue Montreal.
+
+Scale: Body 14px; Dashboard Stats 24px Bold; Labels 11px (All Caps, 0.05em tracking).
+
+3. The High-Agency Onboarding & Auth
+Zero-Friction Login: Implement WhatsApp/SMS OTP as the primary auth.
+
+The Intentional Delay: Use a 1.5s Marathi-style loading animation on the splash to build brand anticipation.
+
+Micro-copy: Use randomized phrases: "Setting the Stage...", "Rolling Camera...", or "Finding your Crew...".
+
+4. Component-Specific Logic
+The Vouch Badge: Top-right placement on Talent Cards with a subtle gold glow (0 0 10px rgba(255, 215, 0, 0.3)).
+
+Skeleton Loaders: Shimmer animation at a 45° angle; layouts must mirror the final dashboard exactly to reduce perceived latency.
+
+The Greenroom (Feed): 9:16 full-screen video with a bottom-up gradient (rgba(0,0,0,0.8) to transparent) for legibility of the "Hire Me" button.
+
+Progressive Disclosure: Hide search filters in a drawer; keep the focus on Active Deals and Recommended Collaborators.
+
+5. Interaction & Performance
+60fps Target: All animations (logo drawing, feed scrolling) must be butter-smooth.
+
+Physical Feedback: Trigger "Heavy" haptics on the "Initiate Deal" button to signify a high-stakes professional action.
+
+Pro-Tips for using this with an AI:
+For Styling: Ask, "Based on this spec, generate the Tailwind CSS configuration file and a reusable 'TalentCard' component."
+
+For Animation: Ask, "Write the Framer Motion code for the Shirorekha SVG drawing animation described in section 2."
+
+For State: Ask, "Build the React state logic for the Identity Selection (Producer vs. Talent) that triggers the specific Dashboard Skeleton Loaders."

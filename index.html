@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReelCircle - Maharashtra Film Hiring Network</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Yatra+One&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <!-- Shirorekha Splash Screen -->
+  <div id="splash-screen" class="splash-container">
+    <div class="splash-content">
+      <div class="logo-wrapper">
+        <span class="kalakar-logo-text">kalakar
+          <svg class="shirorekha-svg" viewBox="0 0 100 10" preserveAspectRatio="none">
+            <path d="M 0 5 Q 50 2, 100 5" stroke="var(--brand-gold)" stroke-width="4" fill="none" class="draw-line" />
+          </svg>
+        </span>
+      </div>
+      <p id="loading-phrase" class="splash-tagline">Setting the Stage...</p>
+    </div>
+  </div>
+
+  <!-- Zero-Friction Auth Screen -->
+  <div id="auth-screen" class="auth-container" style="display: none;">
+    <div class="auth-box panel">
+      <div class="logo-wrapper" style="margin-bottom: 2rem;">
+        <span class="kalakar-logo-text" style="font-size: 2rem;">kalakar</span>
+      </div>
+      <h2>Login to Kalakar</h2>
+      <p class="auth-subtitle">The professional network for Indian Cinema</p>
+
+      <div class="form-group otp-group">
+        <label for="phone-input">Phone Number (WhatsApp/SMS)</label>
+        <div class="phone-input-wrapper">
+          <span class="country-code">+91</span>
+          <input type="tel" id="phone-input" placeholder="98765 43210" pattern="[0-9]{10}" autocomplete="off">
+        </div>
+      </div>
+
+      <button id="request-otp-btn" class="primary full-width">Continue with OTP</button>
+
+      <div id="otp-verification-step" style="display: none; margin-top: 1.5rem;">
+        <div class="form-group">
+          <label for="otp-input">Enter 4-digit code</label>
+          <input type="text" id="otp-input" placeholder="••••" maxlength="4"
+            style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem;">
+        </div>
+        <button id="verify-otp-btn" class="primary full-width">Verify & Login</button>
+      </div>
+
+      <div class="social-proof-ticker">
+        <div class="ticker-content">
+          <span>🎬 Rahul just signed a DOP contract via Kalakar</span>
+          <span>⭐ Priya (Writer) reached 90% Reliability</span>
+          <span>🎥 12 new Casting Calls in Mumbai today</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Identity Gate (Role Selection Modal) -->
+  <div id="identity-gate-modal" class="modal-overlay" style="display: none;">
+    <div class="identity-gate panel">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <span class="kalakar-logo-text" style="font-size: 2rem;">kalakar</span>
+        <h2>Choose Your Path</h2>
+        <p>This will configure your workspace.</p>
+      </div>
+      <div class="gate-cards">
+        <button class="gate-card" id="btn-role-talent">
+          <h3>I am Talent</h3>
+          <p>Actor, Writer, DOP, Editor, Make-up...</p>
+        </button>
+        <button class="gate-card" id="btn-role-studio">
+          <h3>I am Hiring</h3>
+          <p>Studio, Producer, Casting Director...</p>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand-wrap">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <p class="brand-title">kalakar</p>
+        <p class="brand-subtitle">
+          Leading Film & Talent OS · Maharashtra
+        </p>
+      </div>
+    </div>
+
+    <div class="topbar-nav">
+      <button class="nav-btn active" data-view="feed"><span class="nav-icon">🎭</span> The Stage</button>
+      <button class="nav-btn" data-view="jobs"><span class="nav-icon">🎬</span> Production Jobs</button>
+      <button class="nav-btn" data-view="shortlist"><span class="nav-icon">🔖</span> Shortlist <span
+          id="shortlist-nav-count" class="badge"
+          style="background:var(--brand-gold); color:black; margin-left:0.5rem; display:none;">0</span></button>
+      <button class="nav-btn" data-view="messages"><span class="nav-icon">💬</span> Messaging</button>
+      <button class="nav-btn"><span class="nav-icon">🔔</span> Alerts</button>
+    </div>
+
+    <div class="user-profile">
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="mr">MR</button>
+      </div>
+      <button class="ghost" data-i18n="talentSearch">Talent Search</button>
+      <button class="primary" id="post-job-trigger" data-i18n="postOpportunity">Post Opportunity</button>
+    </div>
+  </header>
+
+  <!-- Post Job Modal -->
+  <div id="post-job-modal" class="modal-overlay">
+    <div class="modal-content panel">
+      <header class="modal-header">
+        <h2 data-i18n="postJob">Post Crew/Casting Job</h2>
+        <button class="close-btn">&times;</button>
+      </header>
+      <form id="post-job-form">
+        <div class="form-group">
+          <label for="job-title">Job Title</label>
+          <input type="text" id="job-title" placeholder="e.g. 1st Assistant Director" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="job-type">Category</label>
+            <select id="job-type">
+              <option value="Feature Film">Feature Film</option>
+              <option value="Streaming Series">Streaming Series</option>
+              <option value="Ad Film">Ad Film</option>
+              <option value="Short Film">Short Film</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="job-location">Location</label>
+            <input type="text" id="job-location" placeholder="Mumbai, Pune..." required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="job-desc">Description & Requirements</label>
+          <textarea id="job-desc" rows="3" placeholder="Describe the role and requirements..."></textarea>
+        </div>
+        <button type="submit" class="primary full-width">Post Opening</button>
+      </form>
+    </div>
+  </div>
+
+  <main>
+    <section class="hero">
+      <div class="hero-main panel">
+        <p class="eyebrow" data-i18n="eyebrow">Maharashtra launch market</p>
+        <h1 data-i18n="heroTitle">Trusted hiring and collaboration for film professionals.</h1>
+        <p class="hero-copy" data-i18n="heroCopy">
+          Built for production houses, casting teams, freelancers, and studios to discover verified talent, hire faster,
+          and manage real shoot operations.
+        </p>
+
+        <div class="hero-actions">
+          <button class="primary" data-i18n="createProfile">Create Profile</button>
+          <button class="ghost" data-i18n="postJob">Post Crew/Casting Job</button>
+        </div>
+
+        <ul class="hero-stats">
+          <li>
+            <strong>34.2K</strong>
+            <span data-i18n="statProfessionals">Active film professionals</span>
+          </li>
+          <li>
+            <strong>2,180</strong>
+            <span data-i18n="statOpenings">Live hiring openings</span>
+          </li>
+          <li>
+            <strong>486</strong>
+            <span data-i18n="statProjects">Active productions</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="hero-side panel">
+        <h2 data-i18n="pulseTitle">Maharashtra Hiring Pulse</h2>
+        <ul class="pulse-list">
+          <li data-i18n="pulse1">Mumbai: Casting call open for Marathi feature lead (Female, 22-28).</li>
+          <li data-i18n="pulse2">Pune: Hiring 2nd AD and Gaffer for 12-day schedule.</li>
+          <li data-i18n="pulse3">Kolhapur: Costume and Art assistants needed for period drama.</li>
+          <li data-i18n="pulse4">Nashik: Line producer shortlist under review for ad film campaign.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="city-strip panel" aria-label="City coverage">
+      <p>Mumbai</p>
+      <p>Pune</p>
+      <p>Nashik</p>
+      <p>Nagpur</p>
+      <p>Kolhapur</p>
+      <p>Aurangabad</p>
+    </section>
+
+    <section class="app-shell" aria-live="polite">
+      <aside class="sidebar panel">
+        <h3 data-i18n="quickActions">Quick Actions</h3>
+        <button data-i18n="actionCasting">Post Casting Call</button>
+        <button data-i18n="actionCrew">Hire Crew</button>
+        <button data-i18n="actionWorkspace">Create Project Workspace</button>
+        <button data-i18n="actionPortfolio">Share Showreel</button>
+
+        <aside class="sidebar panel" style="background: transparent; border: none; padding: 0;">
+          <details class="filter-drawer panel" open>
+            <summary class="filter-summary">
+              <h3>Advanced Search Filters <span
+                  style="font-size: 0.8rem; font-weight: normal; color: var(--brand-gold); float: right;">(Progressive)</span>
+              </h3>
+            </summary>
+            <div class="filter-content" style="padding-top: 1rem;">
+              <label>
+                City
+                <select>
+                  <option>Mumbai</option>
+                  <option>Pune</option>
+                  <option>Nashik</option>
+                </select>
+              </label>
+              <label>
+                Kit Owned
+                <select>
+                  <option>Any</option>
+                  <option>ARRI Alexa 35</option>
+                  <option>RED V-Raptor</option>
+                  <option>Sony FX9</option>
+                  <option>Basic Lighting Kit</option>
+                </select>
+              </label>
+              <label>
+                Union Status
+                <select>
+                  <option>Any</option>
+                  <option>AIFTACC</option>
+                  <option>SWA</option>
+                  <option>FWICE</option>
+                </select>
+              </label>
+            </div>
+          </details>
+        </aside>
+      </aside>
+
+      <div class="view-panel panel">
+        <section class="view active" id="feed-view">
+          <div class="view-header">
+            <h2 data-i18n="feedTitle">The Stage</h2>
+            <div class="feed-filters">
+              <button class="ghost small active">Proof of Craft</button>
+              <button class="ghost small">Following</button>
+            </div>
+          </div>
+
+          <!-- The Craft Streak Trigger -->
+          <div class="craft-streak-banner">
+            <div class="streak-content">
+              <span class="badge new-badge">Weekly Prompt</span>
+              <h3>"The Final Negotiation"</h3>
+              <p>3 lines. 1 location. Show us quiet intensity. Upload your take by Friday 5 PM.</p>
+            </div>
+            <button class="primary small" id="open-upload-btn">Upload Take</button>
+          </div>
+
+          <div id="greenroom-feed" class="greenroom-feed">
+            <!-- Vertical Stage slots rendered here -->
+          </div>
+        </section>
+
+        <section class="view" id="jobs-view">
+          <div class="view-header">
+            <h2 data-i18n="jobsTitle">Jobs & Casting</h2>
+            <div class="tab-selectors">
+              <button class="tab-btn active" data-tab="all">All Jobs</button>
+              <button class="tab-btn" data-tab="my">My Postings</button>
+            </div>
+          </div>
+          <div id="jobs-list" class="cards-grid">
+            <!-- Jobs rendered here -->
+          </div>
+
+          <div id="applicants-section" class="hidden">
+            <div class="section-header">
+              <button class="back-link">&larr; Back to Jobs</button>
+              <h3>Applicants for <span id="current-job-title">Job</span></h3>
+            </div>
+            <div id="applicants-list" class="cards-grid">
+              <!-- Applicants rendered here -->
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="projects-view">
+          <h2 data-i18n="projectsTitle">Projects</h2>
+          <article class="card">
+            <h3>Broken Monsoon</h3>
+            <p data-i18n="projectCard1Body">Web Series · Pre-production · 62% schedule locked</p>
+            <ul class="mini-list">
+              <li data-i18n="projectTask1">Lock callback lineup by Tuesday, 11:00</li>
+              <li data-i18n="projectTask2">Approve art recce budget revision</li>
+              <li data-i18n="projectTask3">Sign camera vendor contract</li>
+            </ul>
+          </article>
+        </section>
+
+        <!-- SHORTLIST MANAGER SECTION -->
+        <section class="view hidden" id="shortlist-view">
+          <div class="view-header" style="justify-content: space-between;">
+            <h2>Shortlist Manager</h2>
+            <button class="primary" id="batch-invite-btn" disabled>Batch Invite to Scope (0 selected)</button>
+          </div>
+          <div class="panel">
+            <div class="shortlist-table-header"
+              style="display: grid; grid-template-columns: 40px 1fr 1fr 120px; padding: 1rem; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.85rem;">
+              <div><input type="checkbox" id="select-all-shortlist"></div>
+              <div>Talent</div>
+              <div>Role</div>
+              <div>Action</div>
+            </div>
+            <div id="shortlist-items-container">
+              <div class="empty-state" style="padding: 3rem; text-align: center; color: var(--muted);">No talent in your
+                shortlist yet. Hit 'HIRE' to save them here.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- MESSAGING SECTION -->
+        <section class="view hidden" id="messages-view">
+          <div class="messaging-layout">
+            <!-- Chat Sidebar: Active Deals -->
+            <div class="chat-sidebar">
+              <div class="chat-sidebar-header">
+                <h3>Active Deals</h3>
+              </div>
+              <div id="chat-list" class="chat-list">
+                <!-- Chat threads rendered here -->
+              </div>
+            </div>
+
+            <!-- Main Chat Window -->
+            <div class="chat-main" id="chat-main-area">
+              <div class="chat-header hidden" id="chat-header">
+                <h3 id="chat-user-name">Talent Name</h3>
+                <button class="ghost small">View Deal Terms</button>
+              </div>
+              <div id="chat-window" class="chat-window">
+                <div class="empty-state">Select a professional to initiate deal dialogue.</div>
+              </div>
+              <div class="chat-input-area hidden" id="chat-input-area">
+                <input type="text" id="chat-message-input"
+                  placeholder="Type message (deal terms, avail checks, etc.)...">
+                <button class="primary" id="send-msg-btn">Send</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Talent Profile Modal -->
+        <div id="talent-profile-modal" class="modal-overlay hidden">
+          <div class="modal-content panel profile-large">
+            <header class="modal-header">
+              <h2>Verified Professional</h2>
+              <button class="close-btn" id="close-prof-btn">&times;</button>
+            </header>
+            <div class="profile-body">
+              <div class="prof-hero">
+                <div class="prof-avatar avatar-large"></div>
+                <div class="prof-hero-info">
+                  <h1 id="prof-name">Talent Name</h1>
+                  <p class="prof-role" id="prof-role">Role</p>
+                  <div class="vouch-badge large">
+                    <span class="vouch-icon">✓</span> Reliability Engine: <span id="prof-rel-score"
+                      style="color:var(--brand-gold); font-weight:bold;">98%</span>
+                  </div>
+                </div>
+                <!-- Deal-First Button -->
+                <div class="hero-actions">
+                  <button class="primary action-gold" id="initiate-deal-btn"
+                    style="padding: 0.8rem 1.5rem; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);">💸
+                    Initiate Deal</button>
+                </div>
+              </div>
+              <div class="profile-stats-row">
+                <div class="stat-box">
+                  <strong>98%</strong>
+                  <span>Reliability</span>
+                </div>
+                <div class="stat-box">
+                  <strong>12 / 14</strong>
+                  <span>Vouches</span>
+                </div>
+                <div class="stat-box">
+                  <strong>34</strong>
+                  <span>Credits</span>
+                </div>
+              </div>
+              <h3>Verified Filmography</h3>
+              <div id="prof-credits-list" class="credits-grid">
+                <!-- Credits rendered here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile Uploader Modal -->
+        <div id="uploader-modal" class="modal-overlay">
+          <div class="modal-content panel">
+            <header class="modal-header">
+              <h2>Upload Proof of Craft</h2>
+              <button class="close-btn" id="close-uploader-btn">&times;</button>
+            </header>
+            <div class="profile-body">
+              <div class="upload-area" id="drop-zone">
+                <span class="upload-icon">⬆️</span>
+                <p>Select video or drop file here</p>
+                <span class="meta">Max 1min. MP4/MOV only.</span>
+                <input type="file" id="file-input" hidden accept="video/*">
+                <button class="ghost small mt-2" onclick="document.getElementById('file-input').click()">Browse
+                  Files</button>
+              </div>
+
+              <div id="uploading-state" class="hidden text-center mt-3">
+                <div class="brand-title shirorekha-pulse">kalakar</div>
+                <p class="meta mt-1">Verifying Craft... <span id="upload-progress">0%</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ONBOARDING WIZARD -->
+        <div id="onboarding-wizard" class="modal-overlay hidden">
+          <div class="modal-content panel profile-large" style="max-width: 600px; padding: 2.5rem; text-align: center;">
+
+            <!-- Step 1: Identity Sync -->
+            <div id="ob-step-1" class="ob-step">
+              <div class="brand-title" style="font-size: 3rem; margin-bottom: 2rem;">kalakar</div>
+              <h2 style="font-size: 1.8rem; margin-bottom: 1rem;">Welcome to the Home of Artists</h2>
+              <p class="meta" style="margin-bottom: 2rem; font-size: 1rem;">Let's skip the resume formatting. Connect
+                your IMDb to generate your Verified Filmography instantly.</p>
+
+              <div class="action-row" style="justify-content: center; margin-bottom: 1rem;">
+                <input type="url" id="imdb-url" placeholder="Paste IMDb URL here"
+                  style="padding: 0.8rem; width: 70%; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+              </div>
+              <button class="primary full-width" id="ob-sync-btn" style="padding: 1rem; font-size: 1.1rem;">Sync Profile
+                Data</button>
+              <div id="ob-syncing-state" class="hidden mt-3">
+                <div class="brand-title shirorekha-pulse" style="font-size: 2rem;">kalakar</div>
+                <p class="meta mt-1">Extracting verified credits...</p>
+              </div>
+            </div>
+
+            <!-- Step 2: Greenroom Debut -->
+            <div id="ob-step-2" class="ob-step hidden">
+              <div class="video-preview-box"
+                style="background: var(--bg); height: 400px; border-radius: 12px; margin-bottom: 1.5rem; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--line);">
+                <div
+                  style="position: absolute; top: 1rem; left: 1rem; right: 1rem; background: rgba(0,0,0,0.7); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255, 215, 0, 0.2); text-align: left;">
+                  <span class="badge new-badge" style="margin-bottom: 0.5rem; display: inline-block;">Director's
+                    Prompt</span>
+                  <p style="font-size: 0.9rem; margin: 0;">"Mewari dialect. You've just realized you've been betrayed by
+                    your closest ally. 20 seconds. Minimal movement."</p>
+                </div>
+                <p class="meta" style="margin-top: 5rem;">Camera preview will appear here.</p>
+
+                <div class="recording-controls"
+                  style="position: absolute; bottom: 2rem; left: 0; right: 0; display: flex; justify-content: center;">
+                  <button id="ob-record-btn"
+                    style="width: 70px; height: 70px; border-radius: 50%; background: #FF3B30; border: 4px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">ACTION</button>
+                </div>
+              </div>
+              <div id="ob-tagging-state" class="hidden">
+                <p class="meta">AI Craft Analysis in progress...</p>
+                <div class="video-tags" style="justify-content: center; margin-top:0.5rem;">
+                  <span class="craft-tag" id="tag-1" style="opacity:0; transition: opacity 0.5s;">#Mewari</span>
+                  <span class="craft-tag" id="tag-2"
+                    style="opacity:0; transition: opacity 0.5s; transition-delay: 0.5s;">#Betrayal</span>
+                  <span class="craft-tag" id="tag-3"
+                    style="opacity:0; transition: opacity 0.5s; transition-delay: 1s;">#Intense</span>
+                </div>
+              </div>
+              <button class="primary full-width hidden mt-3" id="ob-next-to-vouch" style="padding: 1rem;">Next
+                Step</button>
+            </div>
+
+            <!-- Step 3: Vouch & Reliability -->
+            <div id="ob-step-3" class="ob-step hidden">
+              <div class="vouch-badge large"
+                style="margin: 0 auto 1.5rem; display: flex; justify-content: center; width: max-content;">
+                <span class="vouch-icon">✓</span> Reliability Engine
+              </div>
+              <h2 style="font-size: 1.6rem; margin-bottom: 1rem;">Establish Trust.</h2>
+              <p class="meta" style="margin-bottom: 2rem; font-size: 1rem; line-height: 1.5;">Your starting Reliability
+                Score is <strong>50%</strong>. To unlock full access to The Stage, request a Vouch from a Director or
+                HOD you've worked with.</p>
+
+              <div
+                style="background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 2rem; margin-bottom: 2rem;">
+                <input type="email" placeholder="HOD's Professional Email (e.g., name@production.com)"
+                  style="padding: 1rem; width: 100%; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); margin-bottom: 1rem;">
+                <button class="ghost full-width" style="padding: 0.8rem;">Send Vouch Request</button>
+              </div>
+
+              <button class="primary full-width" id="ob-finish-btn"
+                style="padding: 1rem; font-size: 1.1rem; background: var(--brand-gold); color: black;">Enter Kalakar
+                Dashboard</button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <aside class="rightbar">
+        <section class="trending-widget right-card panel">
+          <div class="section-header">
+            <h3>Trending Talent</h3>
+            <span class="meta" style="font-size:0.75rem; color:var(--brand-gold);">Most Vouched - This Week</span>
+          </div>
+          <div id="trending-list" class="trending-list">
+            <!-- Trending talent rendered here -->
+          </div>
+        </section>
+
+        <div class="right-card panel">
+          <h3 data-i18n="profileStrength">Profile Strength</h3>
+          <p class="score">78%</p>
+          <p class="meta" data-i18n="profileHint">Add 2 verified credits and 1 recommendation to reach 90%.</p>
+          <button class="ghost small" data-i18n="completeProfile">Complete Profile</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
