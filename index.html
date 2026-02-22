@@ -86,36 +86,99 @@
     </div>
   </div>
 
-  <header class="topbar">
-    <div class="brand-wrap">
-      <span class="brand-mark" aria-hidden="true"></span>
-      <div>
-        <p class="brand-title">kalakar</p>
-        <p class="brand-subtitle">
-          Leading Film & Talent OS · Maharashtra
-        </p>
+  <!-- Antigravity Navigation Architecture -->
+  <header class="cinematic-header">
+    <div class="header-left">
+      <div class="avatar-trigger" id="sidebar-trigger">
+        <img src="https://i.pravatar.cc/150?img=11" alt="Profile" class="user-avatar">
       </div>
     </div>
-
-    <div class="topbar-nav">
-      <button class="nav-btn active" data-view="feed"><span class="nav-icon">🎭</span> The Stage</button>
-      <button class="nav-btn" data-view="jobs"><span class="nav-icon">🎬</span> Production Jobs</button>
-      <button class="nav-btn" data-view="shortlist"><span class="nav-icon">🔖</span> Shortlist <span
-          id="shortlist-nav-count" class="badge"
-          style="background:var(--brand-gold); color:black; margin-left:0.5rem; display:none;">0</span></button>
-      <button class="nav-btn" data-view="messages"><span class="nav-icon">💬</span> Messaging</button>
-      <button class="nav-btn"><span class="nav-icon">🔔</span> Alerts</button>
+    <div class="header-center">
+      <span class="kalakar-logo-text cinematic-logo">kalakar</span>
     </div>
-
-    <div class="user-profile">
-      <div class="lang-toggle" role="group" aria-label="Language">
-        <button class="lang-btn active" data-lang="en">EN</button>
-        <button class="lang-btn" data-lang="mr">MR</button>
-      </div>
-      <button class="ghost" data-i18n="talentSearch">Talent Search</button>
-      <button class="primary" id="post-job-trigger" data-i18n="postOpportunity">Post Opportunity</button>
+    <div class="header-right">
+      <button class="icon-btn" id="search-trigger" aria-label="Search">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </button>
+      <button class="icon-btn" id="message-trigger" aria-label="Messages">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+          </path>
+        </svg>
+      </button>
     </div>
   </header>
+
+  <!-- Sidebar (The "Engine Room") -->
+  <div id="sidebar-drawer" class="drawer-overlay hidden">
+    <div class="sidebar-panel">
+      <div class="sidebar-header">
+        <img src="https://i.pravatar.cc/150?img=11" alt="Profile" class="user-avatar-large">
+        <div class="sidebar-user-info">
+          <h3>Ishaan Verma</h3>
+          <p class="meta">Actor / Dancer</p>
+        </div>
+        <button class="close-drawer" id="close-sidebar">&times;</button>
+      </div>
+      <div class="sidebar-content">
+        <div class="profile-strength">
+          <h4>Profile Strength</h4>
+          <div class="strength-bar">
+            <div class="strength-fill" style="width: 78%;"></div>
+          </div>
+          <p class="meta">78% Complete</p>
+        </div>
+        <ul class="sidebar-links">
+          <li>Settings & Privacy</li>
+          <li>Verified Credits</li>
+          <li>My Contracts</li>
+          <li>Help & Support</li>
+        </ul>
+      </div>
+      <div class="sidebar-footer">
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="mr">MR</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expandable Search Overlay -->
+  <div id="search-overlay" class="search-fullscreen hidden">
+    <div class="search-header">
+      <div class="search-input-wrap">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24" style="color:var(--muted);">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <input type="text" placeholder="Search talent, roles, production houses..." id="global-search-input" autofocus>
+      </div>
+      <button class="close-search" id="close-search">Cancel</button>
+    </div>
+    <div class="search-content">
+      <div class="search-section">
+        <h4 class="meta">Recent Searches</h4>
+        <ul class="recent-list">
+          <li>Casting Directors in Nashik</li>
+          <li>DOP with RED V-Raptor</li>
+          <li>Marathi Dialogue Writer</li>
+        </ul>
+      </div>
+      <div class="search-section mt-4">
+        <h4 class="meta">Trending Roles</h4>
+        <div class="trending-tags">
+          <span class="chip">1st AD - Web Series</span>
+          <span class="chip">Female Lead (22-28)</span>
+          <span class="chip">Gaffer - Pune Schedule</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Post Job Modal -->
   <div id="post-job-modal" class="modal-overlay">
@@ -541,6 +604,50 @@
       </aside>
     </section>
   </main>
+
+  <!-- Global Bottom Navigation (Thumb Zone) -->
+  <nav class="bottom-nav">
+    <a href="#" class="nav-item active">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+        </path>
+      </svg>
+      <span>Feed</span>
+    </a>
+    <a href="#" class="nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+        </path>
+      </svg>
+      <span>Network</span>
+    </a>
+    <a href="#" class="nav-item fab-item" id="nav-post-fab">
+      <div class="fab-btn">
+        <svg fill="none" viewBox="0 0 24 24" stroke="black" width="24" height="24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+      </div>
+      <span>Post</span>
+    </a>
+    <a href="#" class="nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+        </path>
+      </svg>
+      <span>Jobs</span>
+    </a>
+    <a href="#" class="nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+        </path>
+      </svg>
+      <span>Alerts</span>
+    </a>
+  </nav>
 
   <script src="app.js"></script>
 </body>

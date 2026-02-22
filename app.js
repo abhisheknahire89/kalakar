@@ -298,19 +298,18 @@ function renderStage() {
           <span class="craft-tag">#${creator.tags?.[0] || 'Monologue'}</span>
           <span class="craft-tag">#${creator.tags?.[1] || 'Dramatic'}</span>
         </div>
-        <div class="action-row" style="margin-top: 15px;">
-          <button class="ghost small view-prof-btn" data-id="${creator.id}">View Proof of Craft</button>
+        <div class="action-row" style="margin-top: 24px; display: flex; gap: 16px;">
+          <button class="primary open-chat-btn" data-id="${creator.id}">Initiate Deal</button>
+          <button class="ghost view-prof-btn" data-id="${creator.id}">View Profile</button>
         </div>
-        <div class="interaction-stack">
-          <button class="circle-btn vouch-talent-btn" data-id="${creator.id}">
-            <span class="vouch-icon">✓</span>
-            <small>Vouch</small>
-          </button>
-          <button class="circle-btn shortlist-talent-btn" data-id="${creator.id}">
-            <span>HIRE</span>
-          </button>
-          <button class="hire-badge open-chat-btn" data-id="${creator.id}">MESSAGE</button>
-        </div>
+      </div>
+      <div class="interaction-stack">
+        <button class="circle-btn vouch-talent-btn" data-id="${creator.id}">
+          <span class="vouch-icon">✓</span>
+        </button>
+        <button class="circle-btn shortlist-talent-btn" data-id="${creator.id}">
+          <span>+</span>
+        </button>
       </div>
     `;
     greenroomFeed.appendChild(slot);
@@ -1045,6 +1044,36 @@ document.getElementById('btn-role-studio')?.addEventListener('click', () => {
     renderStage();
     renderTrendingWidget();
   }, 2500);
+});
+
+// Phase 11: Navigation Overlays
+document.getElementById('sidebar-trigger')?.addEventListener('click', () => {
+  document.getElementById('sidebar-drawer').classList.remove('hidden');
+});
+
+document.getElementById('close-sidebar')?.addEventListener('click', () => {
+  document.getElementById('sidebar-drawer').classList.add('hidden');
+});
+
+document.getElementById('sidebar-drawer')?.addEventListener('click', (e) => {
+  if (e.target.id === 'sidebar-drawer') {
+    e.target.classList.add('hidden');
+  }
+});
+
+document.getElementById('search-trigger')?.addEventListener('click', () => {
+  const overlay = document.getElementById('search-overlay');
+  overlay.classList.remove('hidden');
+  setTimeout(() => document.getElementById('global-search-input')?.focus(), 50);
+});
+
+document.getElementById('close-search')?.addEventListener('click', () => {
+  document.getElementById('search-overlay').classList.add('hidden');
+});
+
+document.getElementById('nav-post-fab')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  document.getElementById('post-job-modal').classList.add('active');
 });
 
 setLanguage('en');
