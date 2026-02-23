@@ -5,46 +5,44 @@ import { renderNetworkBoard } from './js/components/network.js';
 import { renderJobs } from './js/components/jobs.js';
 import { renderChatList } from './js/components/chat.js';
 
-window.StorageService = StorageService; 
+window.StorageService = StorageService;
 
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    const loadingPhrases = ["Setting the Stage...", "Rolling Camera...", "Finding your Crew..."];
-    let phraseIndex = 0;
-    const phraseEl = document.getElementById('loading-phrase');
-    const phraseInterval = setInterval(() => {
-      phraseIndex = (phraseIndex + 1) % loadingPhrases.length;
-      if (phraseEl) phraseEl.textContent = loadingPhrases[phraseIndex];
-    }, 500);
+try {
+  const loadingPhrases = ["Setting the Stage...", "Rolling Camera...", "Finding your Crew..."];
+  let phraseIndex = 0;
+  const phraseEl = document.getElementById('loading-phrase');
+  const phraseInterval = setInterval(() => {
+    phraseIndex = (phraseIndex + 1) % loadingPhrases.length;
+    if (phraseEl) phraseEl.textContent = loadingPhrases[phraseIndex];
+  }, 500);
 
-    setTimeout(() => { if (navigator.vibrate) navigator.vibrate([20, 30, 20]); }, 1200);
+  setTimeout(() => { if (navigator.vibrate) navigator.vibrate([20, 30, 20]); }, 1200);
 
-    setTimeout(() => {
-      clearInterval(phraseInterval);
-      const splash = document.getElementById('splash-screen');
-      if (splash) splash.style.display = 'none';
+  setTimeout(() => {
+    clearInterval(phraseInterval);
+    const splash = document.getElementById('splash-screen');
+    if (splash) splash.style.display = 'none';
 
-      window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
-        if (!session) {
-          const authScreen = document.getElementById('auth-screen');
-          if (authScreen) authScreen.style.display = 'flex';
-        } else {
-          document.getElementById('auth-screen').style.display = 'none';
-          document.getElementById('identity-gate-modal').style.display = 'none';
-          renderStage();
-        }
-      });
-    }, 1500);
-  } catch (error) {
-    console.error("Splash Screen Error: ", error);
-  }
-});
+    window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        const authScreen = document.getElementById('auth-screen');
+        if (authScreen) authScreen.style.display = 'flex';
+      } else {
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('identity-gate-modal').style.display = 'none';
+        renderStage();
+      }
+    });
+  }, 1500);
+} catch (error) {
+  console.error("Splash Screen Error: ", error);
+}
 
 window.kalakarVideoObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     const video = entry.target;
     if (!video || video.tagName !== 'VIDEO') return;
-    if (entry.isIntersecting) { if (video.paused) video.play().catch(e => console.log('Autoplay prevented', e)); } 
+    if (entry.isIntersecting) { if (video.paused) video.play().catch(e => console.log('Autoplay prevented', e)); }
     else { if (!video.paused) video.pause(); }
   });
 }, { threshold: 0.6 });
@@ -69,8 +67,8 @@ document.addEventListener('click', (e) => {
     const targetId = trigger.getAttribute('data-target');
     const modal = document.getElementById(targetId + '-modal');
     if (modal) {
-        document.querySelectorAll('.slide-modal.active').forEach(m => m.classList.remove('active'));
-        modal.classList.add('active');
+      document.querySelectorAll('.slide-modal.active').forEach(m => m.classList.remove('active'));
+      modal.classList.add('active');
     }
   }
   const closeBtn = e.target.closest('[data-close]');
