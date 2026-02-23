@@ -325,35 +325,49 @@ function renderStage() {
       const slot = document.createElement('div');
       slot.className = 'video-slot';
       slot.innerHTML = `
-        <img src="${creator.videoUrl}" class="video-placeholder" alt="Proof of Craft">
-        <div class="floating-score">⭐ <span class="score-val score-val-${creator.id}">${creator.reliability || 98}%</span> VOUCHED</div>
-        <div class="vouch-badge">
-          <span class="vouch-icon">✓</span> Vouched by ${creator.vouchedBy}
-        </div>
-        <div class="hire-overlay">
-          <div class="creator-info">
-            <div class="creator-name">
-              ${creator.name} 
-              ${creator.verified ? '<span class="verified-icon" title="Verified Professional">★</span>' : ''}
+        <div class="video-card__media">
+          <img src="${creator.videoUrl}" class="video-placeholder" alt="Proof of Craft">
+          <div class="video-card__play-overlay">
+            <div class="video-card__play-btn">▶</div>
+          </div>
+          
+          <!-- Premium Glassmorphic Header -->
+          <div class="video-card__glass-header">
+            <div class="glass-badge highlight">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+              Vouched by ${creator.vouchedBy}
             </div>
-            <p>${creator.role} · Reliability: <span class="score-text score-val-${creator.id}">${creator.reliability || 98}%</span></p>
-          <div class="video-tags">
+            <div class="glass-badge">
+              <span class="score-val score-val-${creator.id}">${creator.reliability || 98}%</span> Score
+            </div>
+          </div>
+        </div>
+        
+        <div class="hire-overlay" style="position: relative; background: transparent; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <!-- Unified Author Row -->
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="https://i.pravatar.cc/150?u=${encodeURIComponent(creator.name)}" class="user-avatar" style="width: 40px; height: 40px;" alt="Avatar">
+            <div class="creator-info" style="margin: 0;">
+              <div class="creator-name" style="font-size: 1.1rem; font-weight: 700;">
+                ${creator.name} 
+                ${creator.verified ? '<span class="verified-icon" title="Verified Professional">★</span>' : ''}
+                <span style="font-size: 0.9rem; font-weight: 500; color: var(--brand-gold); margin-left: 8px;">[ ${creator.reliability || 98}% ]</span>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--muted);">${creator.role} · ${creator.city || 'Mumbai'}</p>
+            </div>
+          </div>
+          
+          <div class="video-tags" style="margin-left: 52px; font-size: 0.8rem; color: var(--muted);">
             <span class="craft-tag">#${creator.tags?.[0] || 'Monologue'}</span>
             <span class="craft-tag">#${creator.tags?.[1] || 'Dramatic'}</span>
+            <span class="craft-tag">#Intense</span>
           </div>
-          <div class="action-row" style="margin-top: 24px; display: flex; gap: 16px;">
-            <button class="primary open-chat-btn" data-id="${creator.id}">Initiate Deal</button>
-            <button class="ghost view-prof-btn" data-id="${creator.id}">View Profile</button>
+
+          <div class="action-row" style="margin-top: 12px; margin-left: 52px; display: flex; gap: 12px;">
+            <button class="primary open-chat-btn" data-id="${creator.id}" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px;">Initiate Deal</button>
+            <button class="ghost shortlist-talent-btn" data-id="${creator.id}" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px;">+ Shortlist</button>
+            <button class="ghost vouch-talent-btn" data-id="${creator.id}" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px;">👏 Vouch</button>
           </div>
-        </div> <!-- close creator-info -->
-        </div> <!-- close hire-overlay -->
-        <div class="interaction-stack">
-          <button class="circle-btn vouch-talent-btn" data-id="${creator.id}">
-            <span class="vouch-icon">✓</span>
-          </button>
-          <button class="circle-btn shortlist-talent-btn" data-id="${creator.id}">
-            <span>+</span>
-          </button>
         </div>
       `;
       greenroomFeed.appendChild(slot);
@@ -537,13 +551,14 @@ function renderTrendingWidget() {
 
   trendingList.innerHTML = trendingData.map(t => `
     <div class="trending-item">
-      <div class="trending-info">
-        <h4>${t.name}</h4>
-        <p>${t.role}</p>
+      <img src="https://i.pravatar.cc/150?u=${encodeURIComponent(t.name)}" class="trending-item__avatar" alt="Avatar">
+      <div class="trending-item__info">
+        <div class="trending-item__name">${t.name}</div>
+        <div class="trending-item__role">
+          ${t.role} <span class="trending-item__vouch">✓ ${t.vouches}</span>
+        </div>
       </div>
-      <div class="vouch-count">
-        ✓ ${t.vouches}
-      </div>
+      <button class="trending-item__add">+ Add</button>
     </div>
   `).join('');
 }
@@ -1234,6 +1249,14 @@ document.getElementById('nav-post-fab')?.addEventListener('click', (e) => {
   document.getElementById('post-job-modal').classList.remove('hidden');
 });
 
+// Phase 23: Expand Desktop Post Composer
+const desktopPostInput = document.querySelector('.create-post-pill .post-input-btn');
+if (desktopPostInput) {
+  desktopPostInput.addEventListener('click', (e) => {
+    e.target.closest('.create-post-pill').classList.toggle('expanded');
+  });
+}
+
 // --- P0 PERFORMANCE: LAZY VIDEO PLAYBACK OBSERVER ---
 window.kalakarVideoObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
@@ -1285,12 +1308,11 @@ if (pushBtn) {
 
     Notification.requestPermission().then(permission => {
       if (permission === 'granted') {
-        // Update UI
-        pushBtn.innerHTML = '✓ Alerts Enabled';
-        pushBtn.classList.remove('ghost');
-        pushBtn.style.color = 'var(--success)';
-        pushBtn.style.borderColor = 'var(--success)';
-        pushBtn.disabled = true;
+        // Update UI Collapse State
+        const widget = pushBtn.closest('.job-alerts-widget');
+        if (widget) {
+          widget.classList.add('enabled');
+        }
 
         // Simulate incoming push after 12 seconds
         setTimeout(() => {

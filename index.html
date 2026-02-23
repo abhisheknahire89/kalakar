@@ -328,61 +328,97 @@
   <main class="app-shell">
     <aside class="sidebar left-sidebar">
       <!-- New Profile Card Component -->
-      <div class="profile-card panel">
-        <div class="profile-cover"></div>
-        <div class="profile-avatar-wrapper">
-          <img src="https://i.pravatar.cc/150?img=11" alt="Profile" class="profile-avatar-main">
+      <div class="profile-card card" style="padding: 16px; text-align: center;">
+        <div class="profile-avatar-wrapper" style="margin-top: 0;">
+          <img src="https://i.pravatar.cc/150?img=11" alt="Profile" class="profile-avatar-main"
+            style="width: 64px; height: 64px; margin: 0 auto;">
         </div>
-        <div class="profile-info">
-          <h3 class="profile-name">Ishaan Verma</h3>
-          <p class="profile-headline meta">Actor / Dancer</p>
+        <div class="profile-info" style="margin-top: 12px;">
+          <h3 class="profile-name" style="font-size: 1.1rem; margin-bottom: 2px;">Ishaan Verma</h3>
+          <p class="profile-headline meta" style="font-size: 0.85rem;">Actor / Dancer</p>
         </div>
-        <div class="divider"></div>
-        <div class="profile-stats">
-          <div class="stat-row">
-            <span class="stat-label">Profile viewers</span>
-            <span class="stat-value">45</span>
+        <div class="divider" style="margin: 12px 0;"></div>
+        <div class="profile-stats"
+          style="font-size: 0.8rem; color: var(--muted); display: flex; justify-content: center; gap: 12px; align-items: center;">
+          <span style="display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg> 45 views</span>
+          <span>•</span>
+          <span style="display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 20V10" />
+              <path d="M18 20V4" />
+              <path d="M6 20v-4" />
+            </svg> 234 imp</span>
+        </div>
+        <div class="divider" style="margin: 12px 0;"></div>
+        <div class="sidebar-links"
+          style="display: flex; flex-direction: column; gap: 12px; text-align: left; padding-left: 8px;">
+          <div
+            style="cursor: pointer; font-size: 0.9rem; color: var(--text); display:flex; align-items:center; gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+            </svg> Saved (12)
           </div>
-          <div class="stat-row">
-            <span class="stat-label">Post impressions</span>
-            <span class="stat-value">234</span>
+          <div
+            style="cursor: pointer; font-size: 0.9rem; color: var(--text); display:flex; align-items:center; gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+            </svg> Settings
           </div>
-        </div>
-        <div class="divider"></div>
-        <div class="my-items">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
-          </svg>
-          <span>My items</span>
         </div>
       </div>
 
-      <details class="filter-drawer panel mt-4" open>
-        <summary class="filter-summary">
-          <h3>Network Filters <span
-              style="font-size: 0.8rem; font-weight: normal; color: var(--brand-gold); float: right;">(Progressive)</span>
+      <!-- Find Talent Filters -->
+      <div class="card mt-4" style="padding: 16px;">
+        <div class="section-header" style="margin-bottom: 12px;">
+          <h3 class="section-header__title" style="display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg> FIND TALENT
           </h3>
-        </summary>
-        <div class="filter-content" style="padding-top: 1rem;">
-          <label>
+        </div>
+        <div class="filter-content" style="display: flex; flex-direction: column; gap: 12px;">
+          <label style="font-size: 0.85rem; color: var(--muted);">
             City
-            <select>
+            <select class="cinematic-select" id="desktop-filter-city">
               <option>Mumbai</option>
               <option>Pune</option>
               <option>Nashik</option>
             </select>
           </label>
-          <label>
+          <label style="font-size: 0.85rem; color: var(--muted);">
+            Role
+            <select class="cinematic-select" id="desktop-filter-role">
+              <option>Any</option>
+              <option>Actor</option>
+              <option>Cinematographer</option>
+              <option>Director</option>
+            </select>
+          </label>
+          <label style="font-size: 0.85rem; color: var(--muted);">
             Kit Owned
-            <select>
+            <select class="cinematic-select" id="desktop-filter-kit">
               <option>Any</option>
               <option>ARRI Alexa 35</option>
               <option>RED V-Raptor</option>
             </select>
           </label>
+          <button class="primary full-width mt-2"
+            style="border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg> Search Talent
+          </button>
         </div>
-      </details>
+      </div>
     </aside>
 
     <div class="view-panel panel">
@@ -681,18 +717,45 @@
     </div>
 
     <aside class="rightbar">
-      <div class="pulse-widget panel mb-4">
+      <div class="pulse-widget card mb-4">
         <div class="section-header">
-          <h3>Maharashtra Hiring Pulse</h3>
+          <h3 class="section-header__title">MH HIRING PULSE</h3>
+          <button id="post-job-trigger-pulse" class="ghost small" style="padding: 4px 12px; font-size: 0.8rem;">+ Post
+            Job</button>
         </div>
-        <ul class="pulse-list" style="margin-top:0.5rem; font-size:0.85rem; color:var(--muted); padding-left:1.2rem;">
-          <li>Mumbai: Casting call open for Marathi feature lead (Female, 22-28).</li>
-          <li>Pune: Hiring 2nd AD and Gaffer for 12-day schedule.</li>
-          <li>Kolhapur: Costume and Art assistants needed for period drama.</li>
-        </ul>
-        <button id="post-job-trigger" class="primary full-width mt-3"
-          style="border-radius: 20px; font-weight: 600; font-size: 0.95rem; margin-top: 1rem; color: black; background: var(--brand-gold);">Post
-          a free job</button>
+
+        <div class="job-item">
+          <!-- Replacing 📍 with SVG -->
+          <div class="job-item__location" style="display:flex; align-items:center; gap:4px;"><svg width="12" height="12"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg> Mumbai</div>
+          <div class="job-item__title">Casting call: Marathi feature lead</div>
+          <div class="job-item__meta">Female, 22-28 • 2d ago</div>
+        </div>
+
+        <div class="job-item">
+          <!-- Replacing 📍 with SVG -->
+          <div class="job-item__location" style="display:flex; align-items:center; gap:4px;"><svg width="12" height="12"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg> Pune</div>
+          <div class="job-item__title">2nd AD + Gaffer needed</div>
+          <div class="job-item__meta">12-day schedule • 5d ago</div>
+        </div>
+
+        <div class="job-item" style="border-bottom: none;">
+          <!-- Replacing 📍 with SVG -->
+          <div class="job-item__location" style="display:flex; align-items:center; gap:4px;"><svg width="12" height="12"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg> Kolhapur</div>
+          <div class="job-item__title">Costume & Art assistants</div>
+          <div class="job-item__meta">Period drama • 1w ago</div>
+        </div>
       </div>
 
       <!-- Phase 21: Push Notifications Simulation -->
@@ -712,10 +775,10 @@
         </button>
       </div>
 
-      <section class="trending-widget panel mt-4">
+      <section class="trending-widget card mt-4">
         <div class="section-header">
-          <h3>Trending Talent</h3>
-          <span class="meta" style="font-size:0.75rem; color:var(--brand-gold);">Most Vouched</span>
+          <h3 class="section-header__title">Trending Talent</h3>
+          <span class="section-header__badge">Most Vouched</span>
         </div>
         <div id="trending-list" class="trending-list">
           <!-- Trending talent rendered here -->
