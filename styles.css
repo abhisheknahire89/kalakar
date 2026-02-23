@@ -1,6 +1,6 @@
 :root {
-  --bg: #0A0A0A;
-  /* Deep Cinematic Black */
+  --bg: #121212;
+  /* Deep Cinematic Charcoal per Clay Guidelines */
   --surface: #141414;
   /* Elevated Matte */
   --surface-2: #1A1A1A;
@@ -23,17 +23,69 @@
   --chip: #222222;
 }
 
+/* Typography Swaps (Phase 26) */
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+.section-header__title,
+.slide-modal__title {
+  font-family: 'Yatra One', serif;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+
 * {
   box-sizing: border-box;
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
 }
 
 /* ========== DESKTOP POLISH GLOBAL UTILITIES (Phase 23) ========== */
+/* Phase 34: Global Input Standardization */
+input[type="text"],
+input[type="tel"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+textarea {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 12px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="tel"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+textarea:focus {
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 1px var(--brand-gold);
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 24px;
+  /* Strict 8px grid constraint */
+  margin-bottom: 24px;
+  /* Strict 8px grid */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
@@ -2096,4 +2148,404 @@ select {
 
 .prompt-banner__cta:active {
   transform: scale(0.95);
+}
+
+/* ========== PHASE 25: SLIDE-MODALS & DEMO DATA ========== */
+.slide-modal {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 400px;
+  max-width: 100vw;
+  height: 100vh;
+  background: var(--bg);
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.slide-modal.active {
+  right: 0;
+}
+
+.slide-modal__header {
+  padding: 24px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slide-modal__title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.slide-modal__close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.slide-modal__close:hover {
+  color: #fff;
+}
+
+.slide-modal__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* Reusable List Item for Demo Data */
+.demo-list-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.demo-list-item:hover {
+  background: var(--surface);
+}
+
+.demo-list-item:last-child {
+  border-bottom: none;
+}
+
+.demo-list-item h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.demo-list-item p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ========== PHASE 27: JOBS & CASTING DASHBOARD ========== */
+.roles-carousel {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 16px;
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.roles-carousel::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+.job-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  /* Strict 8px constraint */
+  min-width: 280px;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.job-card.feed-item {
+  min-width: 100%;
+}
+
+.job-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.job-card__title {
+  font-family: 'Yatra One', serif;
+  font-size: 1.25rem;
+  margin: 0 0 8px 0;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.job-card__prod {
+  font-size: 0.9rem;
+  color: var(--brand-gold);
+  font-weight: 600;
+  margin: 0;
+}
+
+.job-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.job-meta__tag {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.job-card__btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(197, 160, 89, 0.1);
+  color: var(--brand-gold);
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.job-card__btn:hover {
+  background: var(--brand-gold);
+  color: #000;
+}
+
+/* ========== PHASE 28: PROJECTS DASHBOARD ========== */
+.project-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: border-color 0.2s;
+}
+
+.project-card:hover {
+  border-color: var(--brand-gold);
+}
+
+.project-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.project-card__title {
+  font-family: 'Yatra One', serif;
+  font-size: 1.4rem;
+  margin: 0 0 4px 0;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.project-card__meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--brand-gold);
+  border-radius: 3px;
+  transition: width 0.5s ease-out;
+}
+
+.project-card .mini-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.project-card .mini-list li {
+  padding-left: 4px;
+}
+
+/* ========== PHASE 29: NETWORK & TALENT DISCOVERY ========== */
+.talent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.talent-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.talent-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand-gold);
+}
+
+.talent-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--line);
+}
+
+.talent-avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Yatra One', serif;
+  font-size: 2rem;
+  color: var(--brand-gold);
+}
+
+.talent-info h3 {
+  font-family: 'Yatra One', serif;
+  font-size: 1.4rem;
+  margin: 0 0 4px 0;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.talent-info p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.talent-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.talent-tag {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.talent-tag.vouched {
+  color: var(--brand-gold);
+  border-color: rgba(197, 160, 89, 0.3);
+  background: rgba(197, 160, 89, 0.05);
+}
+
+.kalakar-search:focus {
+  outline: none;
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 2px rgba(197, 160, 89, 0.2);
+}
+
+/* ========== PHASE 30: TALENT PROFILE MODAL ========== */
+.profile-avatar-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.profile-avatar-placeholder-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 3px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Yatra One', serif;
+  font-size: 3.5rem;
+  color: var(--brand-gold);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.credit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.credit-item h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.credit-item p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.credit-status {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(197, 160, 89, 0.1);
+  color: var(--brand-gold);
+  border: 1px solid rgba(197, 160, 89, 0.3);
+}
+
+/* ========== PHASE 26: ANALOG FILM GRAIN ========== */
+.film-grain-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }

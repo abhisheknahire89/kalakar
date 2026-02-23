@@ -1,76 +1,69 @@
-const CACHE_NAME = 'kalakar-pwa-v1';
+const CACHE_NAME = 'kalakar-v1';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
     '/styles.css',
     '/app.js',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-    // Placeholder images used in the mock feed
-    'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1533750516457-47f0171bb3ee?auto=format&fit=crop&w=800&q=80',
-    'https://i.pravatar.cc/150?img=11',
-    'https://i.pravatar.cc/150?img=1'
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
-// Install Event: Pre-cache the application shell
-self.addEventListener('install', event => {
+self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('[Service Worker] Caching Application Shell');
-                return cache.addAll(ASSETS_TO_CACHE);
-            })
+            .then((cache) => cache.addAll(ASSETS_TO_CACHE))
             .then(() => self.skipWaiting())
     );
 });
 
-// Activate Event: Clean up old caches if the version changes
-self.addEventListener('activate', event => {
+self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then(cacheNames => {
+        caches.keys().then((cacheNames) => {
             return Promise.all(
-                cacheNames.filter(name => name !== CACHE_NAME).map(name => {
-                    console.log('[Service Worker] Deleting old cache:', name);
-                    return caches.delete(name);
-                })
+                cacheNames.filter((name) => name !== CACHE_NAME)
+                    .map((name) => caches.delete(name))
             );
-        }).then(() => self.clients.claim())
+        })
     );
+    self.clients.claim();
 });
 
-// Fetch Event: Implement Cache-First Strategy with Network Fallback
-self.addEventListener('fetch', event => {
-    // We only cache GET requests
-    if (event.request.method !== 'GET') return;
+self.addEventListener('fetch', (event) => {
+    // We only want to intercept basic GET requests to our own origin or known CDNs
+    // We bypass API calls to Supabase so we don't accidentally cache dynamic auth/db json.
+    if (event.request.method !== 'GET' || event.request.url.includes('supabase.co')) {
+        return;
+    }
 
     event.respondWith(
-        caches.match(event.request).then(cachedResponse => {
-            // Return cached response if found
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-
-            // Otherwise hit the network
-            return fetch(event.request).then(networkResponse => {
-                // If the request was valid, cache it for future offline use
-                // Note: we check if it is a valid 200 response and of type 'basic' or 'cors'
-                if (!networkResponse || networkResponse.status !== 200 ||
-                    (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
-                    return networkResponse;
+        caches.match(event.request)
+            .then((response) => {
+                // Return cached response if found
+                if (response) {
+                    return response;
                 }
 
-                const responseToCache = networkResponse.clone();
-                caches.open(CACHE_NAME).then(cache => {
-                    // Avoid caching analytics or tracking scripts if any existed
-                    cache.put(event.request, responseToCache);
-                });
+                // Otherwise try fetching from network
+                return fetch(event.request).then(
+                    function (response) {
+                        // Check if we received a valid response
+                        if (!response || response.status !== 200 || response.type !== 'basic') {
+                            return response;
+                        }
 
-                return networkResponse;
-            }).catch(error => {
-                console.log('[Service Worker] Fetch failed, returning offline fallback.', error);
-                // If we had a dedicated offline.html, we would return it here.
-                // For a single page app, the root '/' cache serves as the fallback.
-            });
-        })
+                        // Clone the response because the stream can only be consumed once
+                        var responseToCache = response.clone();
+
+                        caches.open(CACHE_NAME)
+                            .then(function (cache) {
+                                cache.put(event.request, responseToCache);
+                            });
+
+                        return response;
+                    }
+                );
+            }).catch(() => {
+                // Fallback for when both Cache and Network fail (offline mode)
+                // Usually, you would return an offline fallback HTML here if the request mode is 'navigate'
+            })
     );
 });

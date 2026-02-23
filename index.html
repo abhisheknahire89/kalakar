@@ -10,6 +10,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Yatra+One&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="styles.css?v=2">
+
+  <!-- Phase 36: Progressive Web App Links -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#121212">
 </head>
 
 <body>
@@ -53,8 +59,8 @@
 
       <div id="otp-verification-step" style="display: none; margin-top: 1.5rem;">
         <div class="form-group">
-          <label for="otp-input">Enter 4-digit code</label>
-          <input type="text" id="otp-input" placeholder="••••" maxlength="4"
+          <label for="otp-input">Enter 6-digit code</label>
+          <input type="text" id="otp-input" placeholder="••••••" maxlength="6"
             style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem;">
         </div>
         <button id="verify-otp-btn" class="primary full-width">Verify & Login</button>
@@ -145,7 +151,7 @@
           </div>
           <span>Messaging</span>
         </a>
-        <a href="#" class="nav-item">
+        <a href="#" class="nav-item" data-target="messages">
           <div class="icon-wrapper">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -325,6 +331,46 @@
     </div>
   </div>
 
+  <!-- Talent Profile View Modal (Phase 30) -->
+  <div id="talent-profile-modal" class="slide-modal">
+    <div class="modal-handle-area" data-close="talent-profile-modal">
+      <div class="modal-handle"></div>
+    </div>
+    <div class="modal-content" style="padding-top: 10px; display: flex; flex-direction: column; height: 100%;">
+      <div class="profile-header-large" style="text-align: center; margin-bottom: 24px;">
+        <div id="tp-avatar-container" style="margin-bottom: 16px; display: flex; justify-content: center;"></div>
+        <h2 id="tp-name" style="font-family: 'Yatra One', serif; font-size: 2rem; margin: 0 0 4px 0;">Name</h2>
+        <p id="tp-role-city" style="color: var(--brand-gold); font-size: 1.1rem; margin: 0 0 12px 0;">Role · City</p>
+        <div id="tp-tags" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;"></div>
+      </div>
+
+      <div class="profile-section" style="margin-bottom: 24px;">
+        <h3
+          style="font-size: 0.9rem; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">
+          Verified Credits</h3>
+        <div id="tp-credits" class="credits-list" style="display: flex; flex-direction: column; gap: 12px;">
+          <!-- Credits injected via JS -->
+        </div>
+      </div>
+
+      <div class="profile-section" style="margin-bottom: 32px;">
+        <h3
+          style="font-size: 0.9rem; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">
+          Equipment / Kit</h3>
+        <p id="tp-kit" style="color: var(--text-secondary);"></p>
+      </div>
+
+      <div class="modal-actions"
+        style="display: flex; gap: 12px; margin-top: auto; padding-top: 24px; border-top: 1px solid var(--line);">
+        <button class="primary action-gold open-chat-btn" id="tp-hire-btn" data-target="negotiation-workspace"
+          style="flex: 1; padding: 14px; border-radius: 8px; font-weight: 600;">Initiate Deal</button>
+        <button class="ghost"
+          style="padding: 14px; border-radius: 8px; font-weight: 600; border: 1px solid var(--line);">Download
+          CV</button>
+      </div>
+    </div>
+  </div>
+
   <main class="app-shell">
     <aside class="sidebar left-sidebar">
       <!-- New Profile Card Component -->
@@ -356,14 +402,14 @@
         <div class="divider" style="margin: 12px 0;"></div>
         <div class="sidebar-links"
           style="display: flex; flex-direction: column; gap: 12px; text-align: left; padding-left: 8px;">
-          <div
+          <div data-target="saved"
             style="cursor: pointer; font-size: 0.9rem; color: var(--text); display:flex; align-items:center; gap:8px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path
                 d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
             </svg> Saved (12)
           </div>
-          <div
+          <div data-target="settings"
             style="cursor: pointer; font-size: 0.9rem; color: var(--text); display:flex; align-items:center; gap:8px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3" />
@@ -459,16 +505,31 @@
         </div>
       </section>
 
-      <section class="view" id="jobs-view">
-        <div class="view-header">
-          <h2 data-i18n="jobsTitle">Jobs & Casting</h2>
-          <div class="tab-selectors">
-            <button class="tab-btn active" data-tab="all">All Jobs</button>
-            <button class="tab-btn" data-tab="my">My Postings</button>
+      <section class="view hidden" id="jobs-view">
+        <div class="view-header" style="flex-direction: column; align-items: flex-start; gap: 16px;">
+          <h2 style="font-family: 'Yatra One', serif; font-size: 1.8rem; margin: 0;">Casting & Crew</h2>
+          <div class="filter-bar"
+            style="width: 100%; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px;">
+            <div class="filter-pill active">All Roles</div>
+            <div class="filter-pill">Acting</div>
+            <div class="filter-pill">Crew</div>
+            <div class="filter-pill">Post-Production</div>
           </div>
         </div>
-        <div id="jobs-list" class="cards-grid">
-          <!-- Jobs rendered here -->
+
+        <!-- Featured Roles Carousel -->
+        <h3 class="section-header__title" style="margin-bottom: 12px; font-size: 1.1rem; color: var(--text-secondary);">
+          Featured Urgent Roles</h3>
+        <div class="roles-carousel" id="featured-jobs-carousel-content">
+          <!-- Carousel items rendered via JS -->
+        </div>
+
+        <!-- Recent Postings Feed -->
+        <h3 class="section-header__title"
+          style="margin-top: 16px; margin-bottom: 12px; font-size: 1.1rem; color: var(--text-secondary);">Recent
+          Postings</h3>
+        <div id="recent-jobs-feed" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Jobs rendered here via JS -->
         </div>
 
         <div id="applicants-section" class="hidden">
@@ -482,37 +543,46 @@
         </div>
       </section>
 
-      <section class="view" id="projects-view">
-        <h2 data-i18n="projectsTitle">Projects</h2>
-        <article class="card">
-          <h3>Broken Monsoon</h3>
-          <p data-i18n="projectCard1Body">Web Series · Pre-production · 62% schedule locked</p>
-          <ul class="mini-list">
-            <li data-i18n="projectTask1">Lock callback lineup by Tuesday, 11:00</li>
-            <li data-i18n="projectTask2">Approve art recce budget revision</li>
-            <li data-i18n="projectTask3">Sign camera vendor contract</li>
-          </ul>
-        </article>
+      <section class="view hidden" id="projects-view">
+        <div class="view-header" style="flex-direction: column; align-items: flex-start; gap: 16px;">
+          <h2 style="font-family: 'Yatra One', serif; font-size: 1.8rem; margin: 0;">Active Productions</h2>
+          <div class="filter-bar"
+            style="width: 100%; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px;">
+            <div class="filter-pill active">In-Progress</div>
+            <div class="filter-pill">Pre-Production</div>
+            <div class="filter-pill">Wrap</div>
+          </div>
+        </div>
+
+        <!-- Projects Feed -->
+        <div id="projects-feed" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Projects rendered here via JS -->
+        </div>
       </section>
 
       <!-- SHORTLIST MANAGER SECTION -->
+      <!-- NETWORK & TALENT DISCOVERY SECTION -->
       <section class="view hidden" id="network-view">
-        <div class="view-header" style="justify-content: space-between;">
-          <h2>Network</h2>
-          <button class="primary" id="batch-invite-btn" disabled>Batch Invite to Scope (0 selected)</button>
+        <div class="view-header" style="flex-direction: column; align-items: flex-start; gap: 16px;">
+          <h2 style="font-family: 'Yatra One', serif; font-size: 1.8rem; margin: 0;">Talent Discovery</h2>
+          <div style="width: 100%; position: relative;">
+            <span
+              style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted);">🔍</span>
+            <input type="text" class="kalakar-search" id="talent-search-input"
+              placeholder="Search by name, role, or union status..."
+              style="width: 100%; padding: 16px 16px 16px 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-family: 'Inter', sans-serif;">
+          </div>
+          <div class="filter-bar" style="width: 100%; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;">
+            <div class="filter-pill active" data-dept="All">All</div>
+            <div class="filter-pill" data-dept="Acting">Acting</div>
+            <div class="filter-pill" data-dept="Direction">Direction</div>
+            <div class="filter-pill" data-dept="Camera">Camera</div>
+          </div>
         </div>
-        <div class="panel">
-          <div class="shortlist-table-header"
-            style="display: grid; grid-template-columns: 40px 1fr 1fr 120px; padding: 1rem; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.85rem;">
-            <div><input type="checkbox" id="select-all-shortlist"></div>
-            <div>Talent</div>
-            <div>Role</div>
-            <div>Action</div>
-          </div>
-          <div id="shortlist-items-container">
-            <div class="empty-state" style="padding: 3rem; text-align: center; color: var(--muted);">No talent in your
-              shortlist yet. Hit 'HIRE' to save them here.</div>
-          </div>
+
+        <!-- Talent Grid Rendered via JS -->
+        <div id="talent-grid" class="talent-grid" style="margin-top: 16px;">
+          <!-- .talent-card elements injected here -->
         </div>
       </section>
 
@@ -714,6 +784,41 @@
         </div>
       </div>
 
+      <!-- STUDIO ONBOARDING WIZARD (Phase 33) -->
+      <div id="studio-onboarding-wizard" class="modal-overlay hidden">
+        <div class="modal-content panel profile-large" style="max-width: 600px; padding: 2.5rem; text-align: center;">
+          <div class="brand-title" style="font-size: 3rem; margin-bottom: 2rem;">kalakar</div>
+          <h2 style="font-size: 1.8rem; margin-bottom: 1rem;">Setup Your Hiring Workspace</h2>
+          <p class="meta" style="margin-bottom: 2rem; font-size: 1rem;">Create a verified recruiter profile to start
+            posting casting calls and crewing up instantly.</p>
+
+          <div style="text-align: left; margin-bottom: 1.5rem;">
+            <label style="font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem; display: block;">Production
+              Company / Agency Name</label>
+            <input type="text" id="studio-company-name" placeholder="e.g. Dharma Productions"
+              style="padding: 1rem; width: 100%; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text);">
+          </div>
+
+          <div style="text-align: left; margin-bottom: 1.5rem;">
+            <label style="font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem; display: block;">Your
+              Designation</label>
+            <input type="text" id="studio-designation" placeholder="e.g. Casting Director, Executive Producer"
+              style="padding: 1rem; width: 100%; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text);">
+          </div>
+
+          <div style="text-align: left; margin-bottom: 2rem;">
+            <label style="font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem; display: block;">GST Number /
+              Verification ID (Optional)</label>
+            <input type="text" id="studio-gst" placeholder="For verified agency badge"
+              style="padding: 1rem; width: 100%; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text);">
+          </div>
+
+          <button class="primary full-width" id="ob-studio-finish-btn"
+            style="padding: 1rem; font-size: 1.1rem; background: var(--brand-gold); color: black;">Complete Setup &
+            Start Hiring</button>
+        </div>
+      </div>
+
     </div>
 
     <aside class="rightbar">
@@ -832,7 +937,168 @@
     </a>
   </nav>
 
-  <script src="app.js?v=1771799208813"></script>
+  <!-- ========================================== -->
+  <!-- PHASE 25: SLIDE MODALS & DEMO DATA LAYERS -->
+  <!-- ========================================== -->
+
+  <!-- Notifications Modal -->
+  <div id="notifications-modal" class="slide-modal">
+    <div class="slide-modal__header">
+      <h3 class="slide-modal__title">Notifications</h3>
+      <button class="slide-modal__close" data-close="notifications-modal">&times;</button>
+    </div>
+    <div class="slide-modal__content">
+      <div class="demo-list-item">
+        <div style="font-size: 24px;">🎬</div>
+        <div>
+          <h4>New Casting Match!</h4>
+          <p>You perfectly match "Lead Antagonist" for an upcoming Excel Ent. series.</p>
+          <span style="font-size: 0.75rem; color: var(--brand-gold); margin-top:4px; display:block;">2m ago</span>
+        </div>
+      </div>
+      <div class="demo-list-item">
+        <div style="font-size: 24px;">⭐</div>
+        <div>
+          <h4>Vouch Received</h4>
+          <p>Vikramaditya Motwane just vouched for your Cinematic Action reel.</p>
+          <span style="font-size: 0.75rem; color: var(--brand-gold); margin-top:4px; display:block;">1h ago</span>
+        </div>
+      </div>
+      <div class="demo-list-item">
+        <div style="font-size: 24px;">🔥</div>
+        <div>
+          <h4>Profile Trending</h4>
+          <p>Your profile is in the top 5% of searches in Mumbai this week.</p>
+          <span style="font-size: 0.75rem; color: var(--brand-gold); margin-top:4px; display:block;">Yesterday</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages Modal -->
+  <div id="messages-modal" class="slide-modal">
+    <div class="slide-modal__header">
+      <h3 class="slide-modal__title">Messages</h3>
+      <button class="slide-modal__close" data-close="messages-modal">&times;</button>
+    </div>
+    <div class="slide-modal__content">
+      <div class="demo-list-item">
+        <img src="https://i.pravatar.cc/150?img=33" style="width: 40px; height: 40px; border-radius: 50%;" alt="Priya">
+        <div style="flex:1;">
+          <div style="display:flex; justify-content: space-between;">
+            <h4>Priya Joshi</h4>
+            <span style="font-size: 0.75rem; color: var(--brand-gold);">Now</span>
+          </div>
+          <p style="color: #fff; font-weight: 600;">Can we jump on a quick call? The dates got moved.</p>
+        </div>
+      </div>
+      <div class="demo-list-item">
+        <div
+          style="width: 40px; height: 40px; border-radius: 50%; background: #222; display:flex; align-items:center; justify-content:center; font-weight:700;">
+          AK</div>
+        <div style="flex:1;">
+          <div style="display:flex; justify-content: space-between;">
+            <h4>Anurag Kashyap <span style="color:var(--brand-gold); font-size: 10px;">★</span></h4>
+            <span style="font-size: 0.75rem; color: var(--muted);">2h</span>
+          </div>
+          <p>Loved the raw energy in that second monologue reel. Let's talk.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Items Modal -->
+  <div id="saved-modal" class="slide-modal">
+    <div class="slide-modal__header">
+      <h3 class="slide-modal__title">Saved Items (12)</h3>
+      <button class="slide-modal__close" data-close="saved-modal">&times;</button>
+    </div>
+    <div class="slide-modal__content">
+      <div class="demo-list-item">
+        <div style="font-size: 24px;">📌</div>
+        <div>
+          <h4>Dharma Prod - "Yodha 2" Casting</h4>
+          <p>Looking for stunt-trained actors. Ends in 3 days.</p>
+        </div>
+      </div>
+      <div class="demo-list-item">
+        <div style="font-size: 24px;">📌</div>
+        <div>
+          <h4>RED Komodo Rental - 30% Off</h4>
+          <p>Saved from @CameraCraze listing.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="slide-modal">
+    <div class="slide-modal__header">
+      <h3 class="slide-modal__title">Settings</h3>
+      <button class="slide-modal__close" data-close="settings-modal">&times;</button>
+    </div>
+    <div class="slide-modal__content">
+      <div class="demo-list-item" style="align-items: center; justify-content: space-between;">
+        <div>
+          <h4>Push Notifications</h4>
+          <p>Get alerted for matches & messages</p>
+        </div>
+        <div style="width: 40px; height: 20px; background: var(--success); border-radius: 10px; position:relative;">
+          <div
+            style="width:16px; height:16px; background:white; border-radius:50%; position:absolute; right:2px; top:2px;">
+          </div>
+        </div>
+      </div>
+      <div class="demo-list-item" style="align-items: center; justify-content: space-between;">
+        <div>
+          <h4>Dark Mode</h4>
+          <p>Cinematic viewing experience</p>
+        </div>
+        <div style="width: 40px; height: 20px; background: var(--success); border-radius: 10px; position:relative;">
+          <div
+            style="width:16px; height:16px; background:white; border-radius:50%; position:absolute; right:2px; top:2px;">
+          </div>
+        </div>
+      </div>
+      <div class="demo-list-item">
+        <h4>Logout</h4>
+      </div>
+    </div>
+  </div>
+
+  <!-- Negotiation Workspace Modal (Phase 26) -->
+  <div id="negotiation-workspace" class="slide-modal" style="width: 100vw; right: -100vw; z-index: 2000;">
+    <div class="slide-modal__header" style="background: var(--surface);">
+      <h3 class="slide-modal__title" style="font-family: 'Yatra One', cursive; font-size: 1.5rem; letter-spacing: 1px;">
+        Initiate Deal Workspace</h3>
+      <button class="slide-modal__close" data-close="negotiation-workspace">&times;</button>
+    </div>
+    <div class="slide-modal__content"
+      style="display: flex; justify-content: center; align-items: center; background: var(--bg);">
+      <div style="text-align: center; color: var(--muted); max-width: 400px; padding: 24px;">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48"
+          style="margin-bottom: 16px; opacity: 0.5;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+          </path>
+        </svg>
+        <h4 style="font-family: 'Inter', sans-serif; font-size: 1.2rem; color: var(--text); margin-bottom: 8px;">
+          End-to-End Deal Flow</h4>
+        <p style="font-family: 'Inter', sans-serif; font-size: 0.95rem; line-height: 1.5;">This formal workspace
+          integrates NDA signing, payment escrow, and shooting schedule alignment directly into the Kalakar Operating
+          System.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analog Film Grain (Phase 26) -->
+  <div class="film-grain-overlay"></div>
+
+  <!-- Supabase Integration (Phase 31) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+
+  <script type="module" src="app.js"></script>
 </body>
 
 </html>
