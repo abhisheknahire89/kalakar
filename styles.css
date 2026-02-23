@@ -11,44 +11,10 @@
   /* Ayurvedic Green */
 
   /* Production Gold */
+  --text-secondary: #a0a0a0;
+
   /* Filter Drawer */
-  .filter-drawer {
-    padding: 1rem;
-  }
-
-  .filter-summary {
-    cursor: pointer;
-    list-style: none;
-    /* remove default arrow */
-  }
-
-  .filter-summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .filter-summary:hover h3 {
-    color: var(--brand-gold);
-  }
-
-  .filter-summary::after {
-    content: '▼';
-    float: right;
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
-
-  .filter-drawer[open] .filter-summary::after {
-    content: '▲';
-  }
-
   /* Deal CTA */
-  .action-gold {
-    background: var(--brand-gold) !important;
-    color: #000 !important;
-    border-color: var(--brand-gold) !important;
-    font-weight: 700;
-  }
-
   /* Upload Modal & Mobile */
   --primary-ink: #121212;
   --accent: #ffae00;
@@ -281,6 +247,13 @@ select {
 
 /* Base App Shell adjustment for mobile vs desktop */
 @media (max-width: 760px) {
+  .mobile-only {
+    display: block !important;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
 
   .app-shell .sidebar,
   .app-shell .rightbar,
@@ -1736,4 +1709,89 @@ select {
   .bottom-nav {
     display: none;
   }
+}
+
+/* ========== FEED UI HIGHLIGHTS (Phase 22) ========== */
+/* Filter Pills (Horizontal Scroll) */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 8px;
+}
+
+.filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-pill {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-pill.active {
+  background: var(--brand-gold);
+  color: #000;
+  border-color: var(--brand-gold);
+}
+
+.filter-pill:hover:not(.active) {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+/* Weekly Prompt Banner (Collapsed) */
+.prompt-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 16px 16px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, transparent 100%);
+  border-left: 3px solid var(--brand-gold);
+  border-radius: 8px;
+}
+
+.prompt-banner__text {
+  flex: 1;
+}
+
+.prompt-banner__title {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.prompt-banner__prompt {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--brand-gold);
+}
+
+.prompt-banner__cta {
+  padding: 6px 16px;
+  background: var(--brand-gold);
+  color: #000;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.prompt-banner__cta:active {
+  transform: scale(0.95);
 }

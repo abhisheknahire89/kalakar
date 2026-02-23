@@ -918,6 +918,7 @@ navButtons.forEach((button) => {
 // Uploader Logic
 const uploaderModal = document.querySelector('#uploader-modal');
 const openUploadBtn = document.querySelector('#open-upload-btn');
+const openUploadBtnMobile = document.querySelector('#open-upload-btn-mobile');
 const closeUploadBtn = document.querySelector('#close-uploader-btn');
 const fileInput = document.querySelector('#file-input');
 const uploadArea = document.querySelector('#drop-zone');
@@ -925,7 +926,13 @@ const uploadingState = document.querySelector('#uploading-state');
 const uploadProgress = document.querySelector('#upload-progress');
 
 if (openUploadBtn) {
-  openUploadBtn?.addEventListener('click', () => {
+  openUploadBtn.addEventListener('click', () => {
+    uploaderModal.classList.add('active');
+  });
+}
+
+if (openUploadBtnMobile) {
+  openUploadBtnMobile.addEventListener('click', () => {
     uploaderModal.classList.add('active');
   });
 }

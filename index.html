@@ -387,8 +387,8 @@
 
     <div class="view-panel panel">
       <section class="view active" id="feed-view">
-        <!-- "Start a post" Pill UI -->
-        <div class="create-post-pill panel mb-4">
+        <!-- "Start a post" Pill UI (Hidden on Mobile) -->
+        <div class="create-post-pill panel mb-4 desktop-only">
           <div class="pill-top">
             <img src="https://i.pravatar.cc/150?img=11" alt="Profile" class="user-avatar">
             <button class="post-input-btn">Start a post, share your craft...</button>
@@ -399,22 +399,23 @@
             <button class="icon-text-btn"><span class="icon">📝</span> Script</button>
           </div>
         </div>
-        <div class="view-header">
-          <h2 data-i18n="feedTitle">The Stage</h2>
-          <div class="feed-filters">
-            <button class="ghost small active">Proof of Craft</button>
-            <button class="ghost small">Following</button>
-          </div>
+
+        <!-- Filter Pills (Horizontal Scroll) -->
+        <div class="filter-bar">
+          <button class="filter-pill active">For You</button>
+          <button class="filter-pill">Following</button>
+          <button class="filter-pill">Actors</button>
+          <button class="filter-pill">Cinematographers</button>
+          <button class="filter-pill">Editors</button>
         </div>
 
-        <!-- The Craft Streak Trigger -->
-        <div class="craft-streak-banner">
-          <div class="streak-content">
-            <span class="badge new-badge">Weekly Prompt</span>
-            <h3>"The Final Negotiation"</h3>
-            <p>3 lines. 1 location. Show us quiet intensity. Upload your take by Friday 5 PM.</p>
+        <!-- Weekly Prompt (Collapsed Banner) -->
+        <div class="prompt-banner" id="open-upload-btn-mobile" style="cursor: pointer;">
+          <div class="prompt-banner__text">
+            <div class="prompt-banner__title">Weekly Prompt</div>
+            <div class="prompt-banner__prompt">"The Final Negotiation"</div>
           </div>
-          <button class="primary small" id="open-upload-btn">Upload Take</button>
+          <button class="prompt-banner__cta">Upload</button>
         </div>
 
         <div id="greenroom-feed" class="greenroom-feed">
