@@ -1,53 +1,202 @@
-Role: You are a Lead Product Engineer. You are building Kalakar, a high-stakes professional platform for the Indian film industry. Your work must reflect the "Antigravity" philosophy: eliminating friction while building deep emotional resonance.
+# Comprehensive Prompt: LinkedIn-Style Professional Networking Web App
 
-Objective: Implement the "Product Look" and "High-Agency Flow" for Kalakar using a Brand-Utility Split and Cinematic Noir design system.
+## Project Overview
+Build a modern, responsive professional networking web application inspired by LinkedIn's design system. The app should be fully functional on desktop, tablet, and mobile devices with a mobile-first approach. Use React with Tailwind CSS for styling.
 
-Task: Develop the following components and styling logic based on these exact specifications:
+---
 
-1. Global Visual Tokens (The Cinematic Noir)
-Set up the design system with these CSS tokens:
+## Tech Stack Requirements
+- **Frontend:** React 18+ with functional components and hooks
+- **Styling:** Tailwind CSS (utility-first, no custom CSS files)
+- **Icons:** Lucide React or Heroicons
+- **State Management:** React Context API or Zustand
+- **Routing:** React Router v6
+- **Animations:** Framer Motion for subtle micro-interactions
+- **Forms:** React Hook Form with validation
 
-Surfaces: Background #121212 (Main); Surface #1E1E1E (Cards/Widgets).
+---
 
-Accents: #FFD700 (Production Gold) for Conversion Actions only; #10B981 (Ayurvedic Green) for Success/Verified states.
+## Design System & Visual Language
 
-Geometry: 12px radius for widgets; 16px for Talent Profile cards.
 
-Borders: 1px solid rgba(255, 255, 255, 0.08) for dark-mode depth.
+```
 
-2. The Typography Strategy (Emotional vs. Functional)
-Emotional UI (Brand): Use the Marathi-resemblance font for the Splash screen and "Empty States."
+### Typography
+```
+Font Family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
+Headings: 600-700 weight
+Body: 400 weight
+Small/Caption: 12-14px, #666666
+```
 
-Animation: Implement the Shirorekha (headstroke) as an animated SVG path with a 1.2s stroke-dasharray transition from left to right.
+### Spacing & Sizing
+```
+Border Radius: 8px (cards), 24px (buttons), 50% (avatars)
+Card Shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05)
+Spacing Scale: 4px, 8px, 12px, 16px, 24px, 32px, 48px
+```
 
-Execution UI (Interface): Use Inter or PP Neue Montreal.
+---
 
-Scale: Body 14px; Dashboard Stats 24px Bold; Labels 11px (All Caps, 0.05em tracking).
+## Core Layout Structure
 
-3. The High-Agency Onboarding & Auth
-Zero-Friction Login: Implement WhatsApp/SMS OTP as the primary auth.
+### Desktop Layout (1024px+)
+```
+┌─────────────────────────────────────────────────────────────┐
+│  NAVBAR (fixed, height: 52px, white bg, bottom shadow)      │
+├─────────┬───────────────────────────────┬───────────────────┤
+│ LEFT    │       MAIN FEED               │   RIGHT SIDEBAR   │
+│ SIDEBAR │       (max-width: 540px)      │   (300px fixed)   │
+│ (225px) │                               │                   │
+│         │                               │                   │
+└─────────┴───────────────────────────────┴───────────────────┘
+```
 
-The Intentional Delay: Use a 1.5s Marathi-style loading animation on the splash to build brand anticipation.
+### Tablet Layout (768px - 1023px)
+- Hide right sidebar
+- Left sidebar becomes collapsible
+- Main feed expands
 
-Micro-copy: Use randomized phrases: "Setting the Stage...", "Rolling Camera...", or "Finding your Crew...".
+### Mobile Layout (<768px)
+```
+┌─────────────────────────┐
+│  NAVBAR (simplified)    │
+├─────────────────────────┤
+│                         │
+│     MAIN CONTENT        │
+│     (full width)        │
+│                         │
+├─────────────────────────┤
+│  BOTTOM NAV (fixed)     │
+│  Home│Network│Post│     │
+│  Notif│Jobs│Me          │
+└─────────────────────────┘
+```
 
-4. Component-Specific Logic
-The Vouch Badge: Top-right placement on Talent Cards with a subtle gold glow (0 0 10px rgba(255, 215, 0, 0.3)).
+---
 
-Skeleton Loaders: Shimmer animation at a 45° angle; layouts must mirror the final dashboard exactly to reduce perceived latency.
+## Component Specifications
 
-The Greenroom (Feed): 9:16 full-screen video with a bottom-up gradient (rgba(0,0,0,0.8) to transparent) for legibility of the "Hire Me" button.
+### 1. Navigation Bar (Desktop)
+```
+Layout: Flex, justify-between, items-center
+Height: 52px
+Background: White with subtle shadow
 
-Progressive Disclosure: Hide search filters in a drawer; keep the focus on Active Deals and Recommended Collaborators.
+Left Section:
+- Logo (custom)
+- Search bar with icon (expandable on mobile)
+  - Placeholder: "Search"
+  - Background: #EEF3F8
+  - Border-radius: 4px
+  - Focus: blue border
 
-5. Interaction & Performance
-60fps Target: All animations (logo drawing, feed scrolling) must be butter-smooth.
+Right Section (Icon + Label, vertical stack):
+- Home (house icon) - active state: black icon, blue underline
+- My Network (people icon)
+- Jobs (briefcase icon)
+- Messaging (chat icon) - show unread count badge
+- Notifications (bell icon) - show count badge
+- Profile dropdown:
+  - Avatar (32x32, circular)
+  - "Me" label with dropdown arrow
+  - Dropdown menu: View Profile, Settings, Sign Out
 
-Physical Feedback: Trigger "Heavy" haptics on the "Initiate Deal" button to signify a high-stakes professional action.
+Navigation Items:
+- Icon size: 24px
+- Label: 12px, text-secondary
+- Active: blue bottom border (3px)
+- Hover: subtle gray background
+```
 
-Pro-Tips for using this with an AI:
-For Styling: Ask, "Based on this spec, generate the Tailwind CSS configuration file and a reusable 'TalentCard' component."
+### 2. Mobile Bottom Navigation
+```
+Position: Fixed bottom
+Height: 50px
+Background: White
+Border-top: 1px solid #E0E0E0
+Display: 5 equal-width items
 
-For Animation: Ask, "Write the Framer Motion code for the Shirorekha SVG drawing animation described in section 2."
+Items: Home, Network, Post (+), Notifications, Jobs
+- Center item (Post): Highlighted with blue background, white icon
+- Active state: Blue icon color
+- Inactive: Gray icon
+```
 
-For State: Ask, "Build the React state logic for the Identity Selection (Producer vs. Talent) that triggers the specific Dashboard Skeleton Loaders."
+### 3. Left Sidebar - Profile Card
+```
+Card with:
+- Cover image placeholder (60px height, gradient background)
+- Profile avatar (72px, circular, positioned -36px from cover)
+- Name (16px, bold, clickable)
+- Headline (14px, text-secondary, 2 lines max)
+- Divider
+- Stats section:
+  - "Profile viewers: 45" (clickable)
+  - "Post impressions: 234" (clickable)
+- Divider
+- "My items" section (saved posts, etc.)
+```
+
+### 4. Main Feed
+
+#### Create Post Box
+```
+Card containing:
+- Row: Avatar (48px) + Input pill button
+  - "Start a post" placeholder
+  - Background: #F3F2EF, hover: darker
+  - Full border-radius (pill shape)
+- Row of action buttons:
+  - Media (image icon, blue) - "Media"
+  - Event (calendar icon, orange) - "Event"
+  - Article (document icon, salmon) - "Write article"
+Each button: Icon + label, horizontal layout
+```
+
+#### Post Card Component
+```
+Structure:
+┌─────────────────────────────────────┐
+│ Header                              │
+│ [Avatar] Name · Connection · Time   │
+│          Headline                   │
+│          [···] More menu           │
+├─────────────────────────────────────┤
+│ Content                             │
+│ Post text (expandable "see more")   │
+│ Hashtags in blue                    │
+├─────────────────────────────────────┤
+│ Media (optional)                    │
+│ Image/Video/Document preview        │
+│ Aspect ratio maintained             │
+├─────────────────────────────────────┤
+│ Engagement Stats                    │
+│ 👍❤️🎉 234 · 45 comments · 12 reposts│
+├─────────────────────────────────────┤
+│ Action Bar                          │
+│ [Like] [Comment] [Repost] [Send]    │
+│ Icons with labels, equal spacing    │
+├─────────────────────────────────────┤
+│ Comments Section (expandable)       │
+│ - Comment input with avatar         │
+│ - Nested comments support           │
+└─────────────────────────────────────┘
+
+Interaction States:
+- Like button: toggles blue, shows animation
+- Repost: dropdown (repost/quote)
+- Send: share modal
+- More menu: Save, Copy link, Report, etc.
+```
+
+#### Feed Post Types to Support
+1. Text-only posts
+2. Single image posts
+3. Multi-image posts (grid layout)
+4. Video posts (with play overlay)
+5. Document/PDF posts (carousel preview)
+6. Poll posts
+7. Event posts
+8. Article shares (with thumbnail card)
+9. Reposted content (nested card

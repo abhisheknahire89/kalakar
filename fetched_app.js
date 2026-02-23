@@ -52,11 +52,7 @@ class StorageService {
             { title: 'The Family Man', role: 'Support', status: 'Verified' }
           ],
           videoUrl: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=800&q=80', // Placeholder
-          vouchedBy: 'Anurag Kashyap',
-          city: 'Mumbai',
-          dept: 'Direction', // Example for testing
-          kit: 'None',
-          union: 'Verified'
+          vouchedBy: 'Anurag Kashyap'
         },
         {
           id: 'c2',
@@ -67,11 +63,7 @@ class StorageService {
             { title: 'Mardaani 2', role: '2nd Unit DOP', status: 'Verified' }
           ],
           videoUrl: 'https://images.unsplash.com/photo-1533750516457-47f0171bb3ee?auto=format&fit=crop&w=800&q=80', // Placeholder
-          vouchedBy: 'Sudeep Chatterjee',
-          city: 'Pune',
-          dept: 'Camera',
-          kit: 'Alexa 35',
-          union: 'Verified'
+          vouchedBy: 'Sudeep Chatterjee'
         },
         {
           id: 'c_me',
@@ -80,11 +72,7 @@ class StorageService {
           verified: true,
           credits: [],
           videoUrl: '',
-          vouchedBy: 'System',
-          city: 'Nashik',
-          dept: 'Direction',
-          kit: 'RED V-Raptor',
-          union: 'Non-Union'
+          vouchedBy: 'System'
         }
       ]);
     }
@@ -289,146 +277,115 @@ function renderStage() {
   const creators = StorageService.get('kalakar_creators') || [];
   greenroomFeed.innerHTML = '';
 
-  // Inject Skeleton Loaders immediately
-  greenroomFeed.innerHTML = `
-    <div class="video-slot" style="padding: 16px;">
-      <div class="skeleton skeleton-video"></div>
-      <div class="skeleton skeleton-meta"></div>
-      <div class="skeleton skeleton-actions"></div>
-    </div>
-    <div class="video-slot" style="padding: 16px;">
-      <div class="skeleton skeleton-video"></div>
-      <div class="skeleton skeleton-meta"></div>
-      <div class="skeleton skeleton-actions"></div>
-    </div>
-  `;
+  // NOISE REDUCTION: Only show creators who are Verified OR have at least one Credit
+  const verifiedCreators = creators.filter(c => c.verified === true || c.credits?.length > 0);
 
-  // Simulate network delay (1500ms)
-  setTimeout(() => {
-    // Clear skeletons
-    greenroomFeed.innerHTML = '';
+  if (verifiedCreators.length === 0) {
+    greenroomFeed.innerHTML = '<div class="empty-state">No verified professionals found.</div>';
+    return;
+  }
 
-    // NOISE REDUCTION: Only show creators who are Verified OR have at least one Credit
-    const verifiedCreators = creators.filter(c => c.verified === true || c.credits?.length > 0);
+  // Add Verification Banner
+  const banner = document.createElement('div');
+  banner.innerHTML = `<div style="background: rgba(255, 215, 0, 0.1); color: var(--brand-gold); padding: 0.5rem; text-align: center; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; border: 1px solid rgba(255, 215, 0, 0.2);">💎 Displaying Verified Professionals Only</div>`;
+  greenroomFeed.appendChild(banner);
 
-    if (verifiedCreators.length === 0) {
-      greenroomFeed.innerHTML = '<div class="empty-state">No verified professionals found.</div>';
-      return;
-    }
-
-    // Add Verification Banner
-    const banner = document.createElement('div');
-    banner.innerHTML = `<div style="background: rgba(255, 215, 0, 0.1); color: var(--brand-gold); padding: 0.5rem; text-align: center; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; border: 1px solid rgba(255, 215, 0, 0.2);">💎 Displaying Verified Professionals Only</div>`;
-    greenroomFeed.appendChild(banner);
-
-    verifiedCreators.forEach(creator => {
-      const slot = document.createElement('div');
-      slot.className = 'video-slot';
-      slot.innerHTML = `
-        <img src="${creator.videoUrl}" class="video-placeholder" alt="Proof of Craft">
-        <div class="floating-score">⭐ <span class="score-val score-val-${creator.id}">${creator.reliability || 98}%</span> VOUCHED</div>
-        <div class="vouch-badge">
-          <span class="vouch-icon">✓</span> Vouched by ${creator.vouchedBy}
-        </div>
-        <div class="hire-overlay">
-          <div class="creator-info">
-            <div class="creator-name">
-              ${creator.name} 
-              ${creator.verified ? '<span class="verified-icon" title="Verified Professional">★</span>' : ''}
-            </div>
-            <p>${creator.role} · Reliability: <span class="score-text score-val-${creator.id}">${creator.reliability || 98}%</span></p>
-          <div class="video-tags">
-            <span class="craft-tag">#${creator.tags?.[0] || 'Monologue'}</span>
-            <span class="craft-tag">#${creator.tags?.[1] || 'Dramatic'}</span>
+  verifiedCreators.forEach(creator => {
+    const slot = document.createElement('div');
+    slot.className = 'video-slot';
+    slot.innerHTML = `
+      <img src="${creator.videoUrl}" class="video-placeholder" alt="Proof of Craft">
+      <div class="floating-score">⭐ <span class="score-val score-val-${creator.id}">${creator.reliability || 98}%</span> VOUCHED</div>
+      <div class="vouch-badge">
+        <span class="vouch-icon">✓</span> Vouched by ${creator.vouchedBy}
+      </div>
+      <div class="hire-overlay">
+        <div class="creator-info">
+          <div class="creator-name">
+            ${creator.name} 
+            ${creator.verified ? '<span class="verified-icon" title="Verified Professional">★</span>' : ''}
           </div>
-          <div class="action-row" style="margin-top: 24px; display: flex; gap: 16px;">
-            <button class="primary open-chat-btn" data-id="${creator.id}">Initiate Deal</button>
-            <button class="ghost view-prof-btn" data-id="${creator.id}">View Profile</button>
-          </div>
-        </div> <!-- close creator-info -->
-        </div> <!-- close hire-overlay -->
-        <div class="interaction-stack">
-          <button class="circle-btn vouch-talent-btn" data-id="${creator.id}">
-            <span class="vouch-icon">✓</span>
-          </button>
-          <button class="circle-btn shortlist-talent-btn" data-id="${creator.id}">
-            <span>+</span>
-          </button>
+          <p>${creator.role} · Reliability: <span class="score-text score-val-${creator.id}">${creator.reliability || 98}%</span></p>
+        <div class="video-tags">
+          <span class="craft-tag">#${creator.tags?.[0] || 'Monologue'}</span>
+          <span class="craft-tag">#${creator.tags?.[1] || 'Dramatic'}</span>
         </div>
-      `;
-      greenroomFeed.appendChild(slot);
-    });
+        <div class="action-row" style="margin-top: 24px; display: flex; gap: 16px;">
+          <button class="primary open-chat-btn" data-id="${creator.id}">Initiate Deal</button>
+          <button class="ghost view-prof-btn" data-id="${creator.id}">View Profile</button>
+        </div>
+      </div> <!-- close creator-info -->
+      </div> <!-- close hire-overlay -->
+      <div class="interaction-stack">
+        <button class="circle-btn vouch-talent-btn" data-id="${creator.id}">
+          <span class="vouch-icon">✓</span>
+        </button>
+        <button class="circle-btn shortlist-talent-btn" data-id="${creator.id}">
+          <span>+</span>
+        </button>
+      </div>
+    `;
+    greenroomFeed.appendChild(slot);
+  });
 
-    // Attach Intersection Observer to newly rendered videos for P0 Performance
-    if (window.kalakarVideoObserver) {
-      document.querySelectorAll('.video-placeholder').forEach(video => {
-        window.kalakarVideoObserver.observe(video);
-      });
-    }
+  document.querySelectorAll('.view-prof-btn').forEach(btn => {
+    btn.addEventListener('click', () => openTalentProfile(btn.dataset.id));
+  });
 
-    // Reattach all event listeners inside the timeout
-    document.querySelectorAll('.view-prof-btn').forEach(btn => {
-      btn.addEventListener('click', () => openTalentProfile(btn.dataset.id));
-    });
+  document.querySelectorAll('.vouch-talent-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.vouched) return; // prevent double click
+      btn.dataset.vouched = 'true';
 
-    document.querySelectorAll('.vouch-talent-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.dataset.vouched) return; // prevent double click
-        btn.dataset.vouched = 'true';
+      btn.style.background = 'var(--brand-gold)';
+      btn.style.color = 'black';
+      btn.innerHTML = '<span class="vouch-icon">✓</span><small>Vouched</small>';
 
-        btn.style.background = 'var(--brand-gold)';
-        btn.style.color = 'black';
-        btn.innerHTML = '<span class="vouch-icon">✓</span><small>Vouched</small>';
+      // WEIGHTED Vouch Sync
+      const id = btn.dataset.id;
+      const creators = StorageService.get('kalakar_creators') || [];
+      const creatorIndex = creators.findIndex(c => c.id === id);
+      if (creatorIndex > -1) {
+        creators[creatorIndex].vp = (creators[creatorIndex].vp || 0) + 1; // Increment VP for trending
+        // Weighted logic: Vouching by a verified user adds 5% instead of 1%
+        creators[creatorIndex].reliability = Math.min(100, (creators[creatorIndex].reliability || 98) + 5);
+        StorageService.set('kalakar_creators', creators);
 
-        // WEIGHTED Vouch Sync
-        const id = btn.dataset.id;
-        const creators = StorageService.get('kalakar_creators') || [];
-        const creatorIndex = creators.findIndex(c => c.id === id);
-        if (creatorIndex > -1) {
-          creators[creatorIndex].vp = (creators[creatorIndex].vp || 0) + 1; // Increment VP for trending
-          // Weighted logic: Vouching by a verified user adds 5% instead of 1%
-          creators[creatorIndex].reliability = Math.min(100, (creators[creatorIndex].reliability || 98) + 5);
-          StorageService.set('kalakar_creators', creators);
+        // Update UI optimistically
+        const scoreEl = document.querySelector(`.score-val-${id}`);
+        if (scoreEl) scoreEl.textContent = creators[creatorIndex].reliability + '%';
 
-          // Update UI optimistically
-          const scoreEl = document.querySelector(`.score-val-${id}`);
-          if (scoreEl) scoreEl.textContent = creators[creatorIndex].reliability + '%';
-
-          const cardScoreEl = document.querySelector(`#prof-rel-score`);
-          if (cardScoreEl && document.querySelector('#prof-name').textContent === creators[creatorIndex].name) {
-            cardScoreEl.textContent = creators[creatorIndex].reliability + '%';
-          }
-
-          renderTrendingWidget(); // re-render trending
+        const cardScoreEl = document.querySelector(`#prof-rel-score`);
+        if (cardScoreEl && document.querySelector('#prof-name').textContent === creators[creatorIndex].name) {
+          cardScoreEl.textContent = creators[creatorIndex].reliability + '%';
         }
-      });
+
+        renderTrendingWidget(); // re-render trending
+      }
     });
+  });
 
-    document.querySelectorAll('.shortlist-talent-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        btn.style.background = 'var(--brand-gold)';
-        btn.style.color = 'black';
-        btn.innerHTML = '<span>SAVED</span>';
+  document.querySelectorAll('.shortlist-talent-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.style.background = 'var(--brand-gold)';
+      btn.style.color = 'black';
+      btn.innerHTML = '<span>SAVED</span>';
 
-        const id = btn.dataset.id;
-        const shortlist = StorageService.get('kalakar_shortlist') || [];
-        if (!shortlist.includes(id)) {
-          shortlist.push(id);
-          StorageService.set('kalakar_shortlist', shortlist);
-          renderShortlist(); // Update the manager view
-        }
-      });
+      const id = btn.dataset.id;
+      const shortlist = StorageService.get('kalakar_shortlist') || [];
+      if (!shortlist.includes(id)) {
+        shortlist.push(id);
+        StorageService.set('kalakar_shortlist', shortlist);
+        renderShortlist(); // Update the manager view
+      }
     });
-
-    document.querySelectorAll('.open-chat-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        openChat(btn.dataset.id);
-      });
+  });
+  document.querySelectorAll('.open-chat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openChat(btn.dataset.id);
     });
-
-  }, 1500); // 1.5s loader duration
+  });
 }
-
 
 function openTalentProfile(creatorId) {
   const creators = StorageService.get('kalakar_creators');
@@ -520,7 +477,23 @@ function renderMessages() {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-// Send message listener moved to DOMContentLoaded
+document.querySelector('#send-msg-btn')?.addEventListener('click', () => {
+  const text = chatInput.value.trim();
+  if (!text || !activeChatId) return;
+
+  const messages = StorageService.get(StorageService.KEYS.MESSAGES) || [];
+  messages.push({
+    chatId: activeChatId,
+    senderId: StorageService.get(StorageService.KEYS.USER),
+    text: text,
+    timestamp: Date.now()
+  });
+
+  StorageService.set(StorageService.KEYS.MESSAGES, messages);
+  chatInput.value = '';
+  renderMessages();
+  renderChatList();
+});
 
 function renderTrendingWidget() {
   const trendingList = document.querySelector('#trending-list');
@@ -655,16 +628,16 @@ function openChat(appId) {
 
 // Modal Logic
 document.querySelector('#post-job-trigger')?.addEventListener('click', () => {
-  postJobModal.classList.remove('hidden');
+  postJobModal.classList.add('active');
 });
 
 document.querySelectorAll('.close-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    postJobModal.classList.add('hidden');
+    postJobModal.classList.remove('active');
   });
 });
 
-postJobForm?.addEventListener('submit', (e) => {
+postJobForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const newJob = {
     id: 'j' + Date.now(),
@@ -680,7 +653,7 @@ postJobForm?.addEventListener('submit', (e) => {
   jobs.push(newJob);
   StorageService.set(StorageService.KEYS.JOBS, jobs);
 
-  postJobModal.classList.add('hidden');
+  postJobModal.classList.remove('active');
   postJobForm.reset();
   renderJobs('my');
 });
@@ -794,7 +767,7 @@ function checkOnboarding() {
 
 // Step 1: Sync
 if (obSyncBtn) {
-  obSyncBtn?.addEventListener('click', () => {
+  obSyncBtn.addEventListener('click', () => {
     obSyncBtn.style.display = 'none';
     obSyncingState.classList.remove('hidden');
 
@@ -808,7 +781,7 @@ if (obSyncBtn) {
 
 // Step 2: Record
 if (obRecordBtn) {
-  obRecordBtn?.addEventListener('click', () => {
+  obRecordBtn.addEventListener('click', () => {
     if (obRecordBtn.classList.contains('recording')) return;
 
     obRecordBtn.classList.add('recording');
@@ -834,7 +807,7 @@ if (obRecordBtn) {
 }
 
 if (obNextToVouch) {
-  obNextToVouch?.addEventListener('click', () => {
+  obNextToVouch.addEventListener('click', () => {
     obStep2.classList.add('hidden');
     obStep3.classList.remove('hidden');
   });
@@ -842,7 +815,7 @@ if (obNextToVouch) {
 
 // Step 3: Finish
 if (obFinishBtn) {
-  obFinishBtn?.addEventListener('click', () => {
+  obFinishBtn.addEventListener('click', () => {
     StorageService.set('kalakar_onboarded', true);
     obWizard.classList.add('hidden');
 
@@ -925,13 +898,13 @@ const uploadingState = document.querySelector('#uploading-state');
 const uploadProgress = document.querySelector('#upload-progress');
 
 if (openUploadBtn) {
-  openUploadBtn?.addEventListener('click', () => {
+  openUploadBtn.addEventListener('click', () => {
     uploaderModal.classList.add('active');
   });
 }
 
 if (closeUploadBtn) {
-  closeUploadBtn?.addEventListener('click', () => {
+  closeUploadBtn.addEventListener('click', () => {
     uploaderModal.classList.remove('active');
     // Reset state
     uploadArea.classList.remove('hidden');
@@ -940,7 +913,7 @@ if (closeUploadBtn) {
 }
 
 if (fileInput) {
-  fileInput?.addEventListener('change', (e) => {
+  fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
       simulateUpload();
     }
@@ -977,6 +950,7 @@ function simulateUpload() {
 
 document.addEventListener('DOMContentLoaded', () => {
   try {
+    // 1. Emotional UI Splash Delay and Text
     const loadingPhrases = ["Setting the Stage...", "Rolling Camera...", "Finding your Crew..."];
     let phraseIndex = 0;
     const phraseEl = document.getElementById('loading-phrase');
@@ -985,28 +959,6 @@ document.addEventListener('DOMContentLoaded', () => {
       phraseIndex = (phraseIndex + 1) % loadingPhrases.length;
       if (phraseEl) phraseEl.textContent = loadingPhrases[phraseIndex];
     }, 500);
-
-    // Reattached #send-msg-btn listener safely inside DOMContentLoaded
-    const sendMsgBtn = document.querySelector('#send-msg-btn');
-    if (sendMsgBtn) {
-      sendMsgBtn.addEventListener('click', () => {
-        const text = chatInput.value.trim();
-        if (!text || !activeChatId) return;
-
-        const messages = StorageService.get(StorageService.KEYS.MESSAGES) || [];
-        messages.push({
-          chatId: activeChatId,
-          senderId: StorageService.get(StorageService.KEYS.USER),
-          text: text,
-          timestamp: Date.now()
-        });
-
-        StorageService.set(StorageService.KEYS.MESSAGES, messages);
-        chatInput.value = '';
-        renderMessages();
-        renderChatList();
-      });
-    }
 
     setTimeout(() => {
       if (navigator.vibrate) {
@@ -1137,173 +1089,10 @@ document.getElementById('close-search')?.addEventListener('click', () => {
   document.getElementById('search-overlay').classList.add('hidden');
 });
 
-// Phase 19: Advanced Search & Filtering Architecture
-function performSearch() {
-  const query = document.getElementById('global-search-input').value.toLowerCase();
-  const city = document.getElementById('filter-city').value;
-  const dept = document.getElementById('filter-dept').value;
-  const kit = document.getElementById('filter-kit').value;
-  const union = document.getElementById('filter-union').value;
-
-  const creators = StorageService.get('kalakar_creators') || [];
-  const resultsContainer = document.getElementById('search-content-area');
-
-  if (!query && !city && !dept && !kit && !union) {
-    // Reset to default recent searches view if everything is empty
-    resultsContainer.innerHTML = `
-      <div class="search-section">
-        <h4 class="meta">Recent Searches</h4>
-        <ul class="recent-list">
-          <li>Casting Directors in Nashik</li>
-          <li>DOP with RED V-Raptor</li>
-          <li>Makeup Artists for Period Drama</li>
-        </ul>
-      </div>
-      <div class="search-section">
-        <h4 class="meta">Trending Tags</h4>
-        <div class="trending-tags">
-          <span class="chip">#IndieFilm</span>
-          <span class="chip">#MarathiCinema</span>
-          <span class="chip">#UrgentCasting</span>
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  // Multi-parameter filter
-  const filtered = creators.filter(c => {
-    const matchQuery = !query || c.name.toLowerCase().includes(query) || (c.role && c.role.toLowerCase().includes(query));
-    const matchCity = !city || c.city === city;
-    const matchDept = !dept || c.dept === dept;
-    const matchKit = !kit || c.kit === kit;
-    const matchUnion = !union || c.union === union;
-
-    return matchQuery && matchCity && matchDept && matchKit && matchUnion;
-  });
-
-  if (filtered.length === 0) {
-    resultsContainer.innerHTML = `
-      <div class="empty-state" style="margin-top: 40px;">
-        <div style="font-size: 2rem; margin-bottom: 12px;">🔍</div>
-        <p>No professionals match your exact filters.</p>
-        <p class="meta" style="font-size: 0.85rem;">Try broadening your kit or city parameters.</p>
-      </div>
-    `;
-    return;
-  }
-
-  // Render matching cards
-  let html = '<div style="display: flex; flex-direction: column; gap: 16px;">';
-  filtered.forEach(creator => {
-    html += `
-      <div class="video-slot" style="position: relative; overflow: hidden; border-radius: 12px; background: var(--surface-2);">
-        <img src="${creator.videoUrl || 'https://via.placeholder.com/800x1000/111/444?text=No+Video'}" style="width: 100%; height: 320px; object-fit: cover; opacity: 0.7;">
-        <div class="hire-overlay" style="position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);">
-          <div class="creator-name" style="font-weight: 600; font-size: 1.1rem; color: #fff;">
-            ${creator.name} ${creator.verified ? '<span style="color:var(--brand-gold);">★</span>' : ''}
-          </div>
-          <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: var(--muted);">${creator.role} · ${creator.city || 'Location Unknown'}</p>
-          <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
-            ${creator.kit && creator.kit !== 'None' ? `<span class="craft-tag" style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">${creator.kit}</span>` : ''}
-            ${creator.union ? `<span class="craft-tag" style="background: rgba(255,215,0,0.1); color: var(--brand-gold); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">${creator.union}</span>` : ''}
-          </div>
-        </div>
-      </div>
-    `;
-  });
-  html += '</div>';
-  resultsContainer.innerHTML = html;
-}
-
-// Attach listeners
-document.getElementById('global-search-input')?.addEventListener('input', performSearch);
-document.querySelectorAll('.filter-chip').forEach(select => {
-  select.addEventListener('change', performSearch);
-});
-
 document.getElementById('nav-post-fab')?.addEventListener('click', (e) => {
   e.preventDefault();
-  document.getElementById('post-job-modal').classList.remove('hidden');
+  document.getElementById('post-job-modal').classList.add('active');
 });
-
-// --- P0 PERFORMANCE: LAZY VIDEO PLAYBACK OBSERVER ---
-window.kalakarVideoObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    const video = entry.target;
-    if (!video || video.tagName !== 'VIDEO') return;
-
-    if (entry.isIntersecting) {
-      if (video.paused) {
-        video.play().catch(e => console.log('Autoplay prevented', e));
-      }
-    } else {
-      if (!video.paused) {
-        video.pause();
-      }
-    }
-  });
-}, { threshold: 0.6 });
-
-// --- P2 OFFLINE PWA CAPABILITY: SERVICE WORKER REGISTRATION ---
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('[Kalakar PWA] Service Worker registered with scope:', registration.scope);
-      })
-      .catch(error => {
-        console.log('[Kalakar PWA] Service Worker registration failed:', error);
-      });
-  });
-}
-
-// Ensure offline banner syncs on load
-window.addEventListener('load', () => {
-  if (!navigator.onLine) {
-    document.getElementById('offline-indicator')?.classList.remove('hidden');
-  }
-});
-window.addEventListener('offline', () => document.getElementById('offline-indicator')?.classList.remove('hidden'));
-window.addEventListener('online', () => document.getElementById('offline-indicator')?.classList.add('hidden'));
-
-// --- Phase 21: PUSH NOTIFICATIONS SIMULATION ---
-const pushBtn = document.getElementById('enable-push-btn');
-if (pushBtn) {
-  pushBtn.addEventListener('click', () => {
-    if (!('Notification' in window)) {
-      alert('This browser does not support desktop notification');
-      return;
-    }
-
-    Notification.requestPermission().then(permission => {
-      if (permission === 'granted') {
-        // Update UI
-        pushBtn.innerHTML = '✓ Alerts Enabled';
-        pushBtn.classList.remove('ghost');
-        pushBtn.style.color = 'var(--success)';
-        pushBtn.style.borderColor = 'var(--success)';
-        pushBtn.disabled = true;
-
-        // Simulate incoming push after 12 seconds
-        setTimeout(() => {
-          const notification = new Notification('New Casting Match 🎬', {
-            body: 'A Director in Mumbai is looking for your exact profile. Click to view.',
-            icon: 'https://i.pravatar.cc/150?img=11', // Re-using avatar as icon
-            badge: 'https://i.pravatar.cc/150?img=11'
-          });
-
-          notification.onclick = function () {
-            window.focus();
-            document.getElementById('jobs-view').classList.add('active');
-            document.getElementById('feed-view').classList.remove('active');
-            this.close();
-          };
-        }, 12000);
-      }
-    });
-  });
-}
 
 setLanguage('en');
 setView('feed');

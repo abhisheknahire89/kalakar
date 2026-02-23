@@ -1,0 +1,331 @@
+# KALAKAR BUILD INSTRUCTIONS
+
+You are building **Kalakar** — a two-sided video marketplace for the Indian film industry. You have access to the existing codebase. Follow these specs exactly.
+
+---
+
+## 🎨 DESIGN SYSTEM: "NOIR + CLAY"
+
+### Colors
+```css
+:root {
+  --bg-primary: #121212;       /* Charcoal */
+  --bg-secondary: #1E1E1E;     /* Card backgrounds */
+  --accent-gold: #FFD700;      /* CTAs, highlights */
+  --accent-green: #10B981;     /* Verified/success states */
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0A0;
+  --border-subtle: #2A2A2A;
+}
+```
+
+### Typography
+- **Brand/Emotional:** `'Yatra One', cursive` — Logo, splash, headings
+- **Functional/Data:** `'Inter', sans-serif` — Body, labels, metrics
+
+### Clay Spacing (8px base grid)
+| Token | Mobile | Desktop | Use |
+|-------|--------|---------|-----|
+| `--space-margin` | 20px | 40px | Page edges |
+| `--space-padding` | 24px | 32px | Inside cards |
+| `--space-gutter` | 16px | 24px | Between cards |
+| `--header-height` | 64px | 80px | Top bar |
+| `--radius` | 16px | 16px | All corners |
+
+```css
+:root {
+  --space-margin: 20px;
+  --space-padding: 24px;
+  --space-gutter: 16px;
+  --header-height: 64px;
+  --radius: 16px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --space-margin: 40px;
+    --space-padding: 32px;
+    --space-gutter: 24px;
+    --header-height: 80px;
+  }
+}
+```
+
+---
+
+## 📱 MOBILE LAYOUT (<768px)
+
+### Structure
+```
+┌─────────────────────────────┐
+│  ☰  [KALAKAR LOGO]  🔍     │  ← Top Bar (64px)
+├─────────────────────────────┤
+│                             │
+│                             │
+│      SINGLE COLUMN          │
+│      (The Stage Feed)       │
+│                             │
+│                             │
+├─────────────────────────────┤
+│ 🏠  👥  [+]  📁  🔔        │  ← Bottom Nav (56px + safe-area)
+└─────────────────────────────┘
+```
+
+### Bottom Navigation (5 tabs)
+| Icon | Label | Route | Notes |
+|------|-------|-------|-------|
+| 🏠 | Feed | `/` | The Stage video feed |
+| 👥 | Network | `/network` | Vouches & connections |
+| ➕ | Post | modal | **Yellow circle FAB**, opens upload |
+| 📁 | Projects | `/projects` | Active deals |
+| 🔔 | Alerts | `/notifications` | Notifications |
+
+### CSS Implementation
+```css
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--bg-secondary);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid var(--border-subtle);
+  z-index: 100;
+}
+
+.bottom-nav__post-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  color: #000;
+  transform: translateY(-12px);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+}
+```
+
+### Top Bar (Mobile)
+```css
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-height);
+  padding: 0 var(--space-margin);
+  background: var(--bg-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+```
+
+---
+
+## 🖥️ DESKTOP LAYOUT (≥768px)
+
+### Structure
+```
+┌────────────────────────────────────────────────────────┐
+│  [KALAKAR]              🔍 Search              [Avatar]│  ← Top Bar (80px)
+├──────────┬─────────────────────────────┬───────────────┤
+│          │                             │               │
+│  ANCHOR  │         THE FEED            │   CONTEXT     │
+│  (240px) │        (flexible)           │   (300px)     │
+│          │                             │               │
+│ • Profile│  • The Stage videos         │ • Recommended │
+│ • Score  │  • Active Deals             │ • Hiring Pulse│
+│ • Nav    │                             │ • Trending    │
+│          │                             │               │
+└──────────┴─────────────────────────────┴───────────────┘
+```
+
+### CSS Grid Implementation
+```css
+.dashboard {
+  display: grid;
+  grid-template-columns: 240px 1fr 300px;
+  gap: var(--space-gutter);
+  padding: var(--space-margin);
+  padding-top: calc(var(--header-height) + var(--space-margin));
+  min-height: 100vh;
+}
+
+.sidebar-left {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-margin));
+  height: fit-content;
+}
+
+.sidebar-right {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-margin));
+  height: fit-content;
+}
+
+/* Hide on mobile */
+@media (max-width: 767px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    padding-bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-margin));
+  }
+  .sidebar-left, .sidebar-right {
+    display: none;
+  }
+}
+```
+
+---
+
+## 🎬 THE STAGE (Video Feed)
+
+### Video Card Structure
+```html
+<article class="video-card">
+  <div class="video-card__media">
+    <video src="..." playsinline></video>
+    <div class="video-card__overlay">
+      <span class="tag">#Monologue</span>
+      <span class="tag">#Dramatic</span>
+    </div>
+  </div>
+  <div class="video-card__meta">
+    <img class="avatar" src="..." alt="">
+    <div class="meta-text">
+      <h3>Ishaan Verma</h3>
+      <span class="vouch-badge">Vouched by Rajesh Mapuskar (HOD)</span>
+    </div>
+    <span class="reliability-score">98%</span>
+  </div>
+  <div class="video-card__actions">
+    <button class="btn-vouch">👏 Vouch</button>
+    <button class="btn-hire">💸 Hire</button>
+    <button class="btn-shortlist">+ Shortlist</button>
+  </div>
+</article>
+```
+
+### Video Performance Rules
+1. **Lazy load** all videos below the fold
+2. **Preload** next video while current is playing
+3. **Use HLS/DASH** for adaptive streaming
+4. **Thumbnail first** — Show poster frame, load video on tap
+5. **Intersection Observer** — Pause videos out of viewport
+
+```javascript
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    const video = entry.target.querySelector('video');
+    if (entry.isIntersecting) {
+      video.play();
+    } else {
+      video.pause();
+    }
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('.video-card').forEach(card => observer.observe(card));
+```
+
+---
+
+## 🦴 SKELETON LOADERS
+
+Match exact card shapes. Show during first 2s load.
+
+```css
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 25%,
+    #2a2a2a 50%,
+    var(--bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-video { height: 400px; }
+.skeleton-meta { height: 60px; margin-top: 12px; }
+.skeleton-actions { height: 48px; margin-top: 12px; }
+```
+
+---
+
+## ✅ RELIABILITY SCORE DISPLAY
+
+```html
+<div class="reliability-badge" data-score="98">
+  <svg class="reliability-ring"><!-- circular progress --></svg>
+  <span class="reliability-value">98%</span>
+</div>
+```
+
+```css
+.reliability-badge {
+  width: 48px;
+  height: 48px;
+  position: relative;
+}
+
+.reliability-badge[data-score^="9"] { --ring-color: var(--accent-green); }
+.reliability-badge[data-score^="8"] { --ring-color: var(--accent-gold); }
+.reliability-badge[data-score^="7"] { --ring-color: #F59E0B; }
+```
+
+---
+
+## 💬 MESSAGING (Deal Negotiation)
+
+- Use **Firebase Realtime DB** or **Firestore** for messages
+- Persist locally with `localStorage` as fallback
+- Show typing indicators
+- "Initiate Deal" opens dedicated production channel
+
+---
+
+## 🚀 BUILD CHECKLIST
+
+### P0 — Before Launch
+- [ ] Implement CSS variables (colors, spacing)
+- [ ] Build mobile bottom nav with yellow FAB
+- [ ] Build desktop 3-column grid
+- [ ] Add skeleton loaders for all card types
+- [ ] Video lazy loading + intersection observer
+- [ ] Sticky sidebars on desktop
+
+### P1 — First Week
+- [ ] HLS video streaming
+- [ ] Firebase messaging integration
+- [ ] Reliability score ring animation
+- [ ] Vouch → score sync (HOD +5%, peer +1%)
+
+### P2 — First Month
+- [ ] Offline support (Service Worker)
+- [ ] Push notifications
+- [ ] Search with filters (city, kit, union)
+- [ ] Shortlist manager bulk actions
+
+---
+
+## 🎯 IMPLEMENTATION COMMANDS
+
+Use these to direct builds:
+
+- `"Implement the mobile bottom navigation per spec"`
+- `"Build the desktop 3-column grid layout"`
+- `"Add skeleton loaders matching video card shape"`
+- `"Optimize video feed with intersection observer"`
+- `"Apply Clay spacing system globally"`
+- `"Build the reliability score ring component"`
