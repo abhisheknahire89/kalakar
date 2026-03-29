@@ -38,43 +38,55 @@
     </div>
   </div>
 
-  <!-- Zero-Friction Auth Screen -->
-  <div id="auth-screen" class="auth-container" style="display: none;">
-    <div class="auth-box panel">
-      <div class="logo-wrapper" style="margin-bottom: 1.5rem;">
-        <span class="kalakar-logo-text" style="font-size: 2rem;">kalakar</span>
+  <!-- AUTH SCREEN (Phase 1: Phone OTP & Google OAuth) -->
+  <section id="auth-screen" class="auth-view" style="display: none; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg);">
+    <div class="login-container glass-panel panel" style="max-width: 420px; text-align: center; padding: 2.5rem; margin: 0 auto;">
+      <div class="login-logo mb-4">
+        <h1 class="brand-title" style="font-size: 3rem; font-family: 'Yatra One', cursive;">kalakar</h1>
+        <p class="meta">Where talent meets the screen</p>
       </div>
-      <h2 style="margin-bottom: 0.25rem; font-size: 1.5rem;">Login to Kalakar</h2>
-      <p class="auth-subtitle">The professional network for Indian Cinema</p>
 
-      <div class="form-group otp-group">
-        <label for="phone-input">Phone Number (WhatsApp/SMS)</label>
-        <div class="phone-input-wrapper">
-          <span class="country-code">+91</span>
-          <input type="tel" id="phone-input" placeholder="98765 43210" pattern="[0-9]{10}" autocomplete="off">
+      <!-- Phone OTP Section -->
+      <div id="phone-form">
+        <h3 class="meta mb-3" style="text-align: left;">Sign in with Phone</h3>
+        <div class="phone-input-group mb-4" style="display: flex; gap: 10px;">
+          <select id="country-code" style="width: 80px; padding: 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+            <option value="+91" selected>+91 🇮🇳</option>
+          </select>
+          <input type="tel" id="phone-input" placeholder="Phone number" maxlength="10" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
         </div>
+        <button id="send-otp-btn" class="primary full-width" style="padding: 14px; border-radius: 20px; font-weight: 700; background: var(--brand-gold); color: black;">Send OTP</button>
       </div>
 
-      <button id="request-otp-btn" class="primary full-width">Continue with OTP</button>
-
-      <div id="otp-verification-step" style="display: none; margin-top: 1.5rem;">
-        <div class="form-group">
-          <label for="otp-input">Enter 6-digit code</label>
-          <input type="text" id="otp-input" placeholder="••••••" maxlength="6"
-            style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem;">
+      <!-- OTP Verify Section (Hidden) -->
+      <div id="otp-form" class="hidden">
+        <p class="meta mb-3">Enter the 6-digit code sent to<br><strong id="otp-phone-display">+91 98765 43210</strong></p>
+        <div class="otp-inputs mb-4" style="display: flex; gap: 8px; justify-content: center;">
+          <input type="text" maxlength="1" class="otp-digit" data-index="0" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+          <input type="text" maxlength="1" class="otp-digit" data-index="1" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+          <input type="text" maxlength="1" class="otp-digit" data-index="2" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+          <input type="text" maxlength="1" class="otp-digit" data-index="3" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+          <input type="text" maxlength="1" class="otp-digit" data-index="4" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+          <input type="text" maxlength="1" class="otp-digit" data-index="5" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
         </div>
-        <button id="verify-otp-btn" class="primary full-width">Verify & Login</button>
+        <button id="verify-otp-btn" class="primary full-width mb-3" style="padding: 14px; border-radius: 20px; font-weight: 700; background: var(--brand-gold); color: black;">Verify</button>
+        <button id="change-number-btn" class="ghost small" style="color: var(--muted); background: none; border: none; cursor: pointer;">← Change number</button>
       </div>
 
-      <div class="social-proof-ticker">
-        <div class="ticker-content">
-          <span>🎬 Rahul just signed a DOP contract via Kalakar</span>
-          <span>⭐ Priya (Writer) reached 90% Reliability</span>
-          <span>🎥 12 new Casting Calls in Mumbai today</span>
-        </div>
+      <div class="login-divider mb-4 mt-4" style="display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.8rem;">
+        <div style="flex: 1; height: 1px; background: var(--line);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--line);"></div>
       </div>
+
+      <button id="google-btn" class="ghost full-width" style="padding: 12px; border-radius: 24px; border: 1px solid #dadce0; background: white; color: #1f1f1f; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; cursor: pointer;">
+        <img src="https://www.google.com/favicon.ico" width="18" height="18" alt="Google icon">
+        Continue with Google
+      </button>
+
+      <p class="meta mt-4" style="font-size: 0.75rem;">By continuing, you agree to our <a href="#" style="color: var(--brand-gold);">Terms</a> & <a href="#" style="color: var(--brand-gold);">Privacy</a></p>
     </div>
-  </div>
+  </section>
 
   <!-- Identity Gate (Role Selection Modal) -->
   <div id="identity-gate-modal" class="modal-overlay" style="display: none;">
@@ -723,83 +735,94 @@
         </div>
       </div>
 
-      <!-- ONBOARDING WIZARD -->
+      <!-- ONBOARDING WIZARD (Master Build v3 - 4 Steps) -->
       <div id="onboarding-wizard" class="modal-overlay hidden">
-        <div class="modal-content panel profile-large" style="max-width: 600px; padding: 2.5rem; text-align: center;">
-
-          <!-- Step 1: Identity Sync -->
+        <div class="modal-content panel profile-large" style="max-width: 500px; padding: 2.5rem; text-align: left;">
+          
+          <!-- Step 1: Craft -->
           <div id="ob-step-1" class="ob-step">
-            <div class="brand-title" style="font-size: 3rem; margin-bottom: 2rem;">kalakar</div>
-            <h2 style="font-size: 1.8rem; margin-bottom: 1rem;">Welcome to the Home of Artists</h2>
-            <p class="meta" style="margin-bottom: 2rem; font-size: 1rem;">Let's skip the resume formatting. Connect
-              your IMDb to generate your Verified Filmography instantly.</p>
-
-            <div class="action-row" style="justify-content: center; margin-bottom: 1rem;">
-              <input type="url" id="imdb-url" placeholder="Paste IMDb URL here"
-                style="padding: 0.8rem; width: 70%; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+            <h4 class="meta mb-2" style="color: var(--brand-gold);">Step 1 of 4</h4>
+            <h2 style="font-size: 1.8rem; margin-bottom: 1.5rem;">What is your primary craft?</h2>
+            <div class="craft-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 2rem;">
+              <button class="ghost craft-select active" data-craft="Actor">🎭 Actor</button>
+              <button class="ghost craft-select" data-craft="Director">🎬 Director</button>
+              <button class="ghost craft-select" data-craft="DOP">📷 DOP</button>
+              <button class="ghost craft-select" data-craft="Editor">✂️ Editor</button>
+              <button class="ghost craft-select" data-craft="Dancer">💃 Dancer</button>
+              <button class="ghost craft-select" data-craft="Writer">✍️ Writer</button>
             </div>
-            <button class="primary full-width" id="ob-sync-btn" style="padding: 1rem; font-size: 1.1rem;">Sync Profile
-              Data</button>
-            <div id="ob-syncing-state" class="hidden mt-3">
-              <div class="brand-title shirorekha-pulse" style="font-size: 2rem;">kalakar</div>
-              <p class="meta mt-1">Extracting verified credits...</p>
-            </div>
+            <button class="primary full-width ob-next-btn" style="padding: 14px; font-weight: 700;">Continue →</button>
           </div>
 
-          <!-- Step 2: Greenroom Debut -->
+          <!-- Step 2: Identity -->
           <div id="ob-step-2" class="ob-step hidden">
-            <div class="video-preview-box"
-              style="background: var(--bg); height: 400px; border-radius: 12px; margin-bottom: 1.5rem; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--line);">
-              <div
-                style="position: absolute; top: 1rem; left: 1rem; right: 1rem; background: rgba(0,0,0,0.7); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255, 215, 0, 0.2); text-align: left;">
-                <span class="badge new-badge" style="margin-bottom: 0.5rem; display: inline-block;">Director's
-                  Prompt</span>
-                <p style="font-size: 0.9rem; margin: 0;">"Mewari dialect. You've just realized you've been betrayed by
-                  your closest ally. 20 seconds. Minimal movement."</p>
-              </div>
-              <p class="meta" style="margin-top: 5rem;">Camera preview will appear here.</p>
-
-              <div class="recording-controls"
-                style="position: absolute; bottom: 2rem; left: 0; right: 0; display: flex; justify-content: center;">
-                <button id="ob-record-btn"
-                  style="width: 70px; height: 70px; border-radius: 50%; background: #FF3B30; border: 4px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">ACTION</button>
+            <h4 class="meta mb-2" style="color: var(--brand-gold);">Step 2 of 4</h4>
+            <h2 style="font-size: 1.8rem; margin-bottom: 1.5rem;">Tell us about you.</h2>
+            <div style="margin-bottom: 1.5rem;">
+              <label class="meta mb-2 block">Full Name</label>
+              <input type="text" id="ob-name" placeholder="Stage Name" style="padding: 12px; width: 100%; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+              <label class="meta mb-2 block">Base City</label>
+              <select id="ob-city" style="padding: 12px; width: 100%; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+                <option value="Mumbai">Mumbai</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Bangalore">Bangalore</option>
+                <option value="Hyderabad">Hyderabad</option>
+                <option value="Chennai">Chennai</option>
+              </select>
+            </div>
+            <div style="margin-bottom: 2rem;">
+              <label class="meta mb-2 block">Profile Photo</label>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <div id="ob-avatar-preview" style="width: 60px; height: 60px; border-radius: 50%; background: var(--surface-2); border: 2px dashed var(--line); display: flex; align-items: center; justify-content: center; overflow: hidden;">📸</div>
+                <button class="ghost small" onclick="document.getElementById('ob-avatar-input').click()">Upload Photo</button>
+                <input type="file" id="ob-avatar-input" hidden accept="image/*">
               </div>
             </div>
-            <div id="ob-tagging-state" class="hidden">
-              <p class="meta">AI Craft Analysis in progress...</p>
-              <div class="video-tags" style="justify-content: center; margin-top:0.5rem;">
-                <span class="craft-tag" id="tag-1" style="opacity:0; transition: opacity 0.5s;">#Mewari</span>
-                <span class="craft-tag" id="tag-2"
-                  style="opacity:0; transition: opacity 0.5s; transition-delay: 0.5s;">#Betrayal</span>
-                <span class="craft-tag" id="tag-3"
-                  style="opacity:0; transition: opacity 0.5s; transition-delay: 1s;">#Intense</span>
-              </div>
+            <div class="action-row">
+              <button class="ghost ob-prev-btn" style="flex: 1;">← Back</button>
+              <button class="primary ob-next-btn" style="flex: 2; padding: 14px; font-weight: 700;">Continue →</button>
             </div>
-            <button class="primary full-width hidden mt-3" id="ob-next-to-vouch" style="padding: 1rem;">Next
-              Step</button>
           </div>
 
-          <!-- Step 3: Vouch & Reliability -->
+          <!-- Step 3: Account Type -->
           <div id="ob-step-3" class="ob-step hidden">
-            <div class="vouch-badge large"
-              style="margin: 0 auto 1.5rem; display: flex; justify-content: center; width: max-content;">
-              <span class="vouch-icon">✓</span> Reliability Engine
+            <h4 class="meta mb-2" style="color: var(--brand-gold);">Step 3 of 4</h4>
+            <h2 style="font-size: 1.8rem; margin-bottom: 1.5rem;">Account Type</h2>
+            <div style="margin-bottom: 2rem;">
+               <div class="account-select-card active mb-3" data-type="talent" style="padding: 16px; border: 1px solid var(--brand-gold); border-radius: 12px; background: rgba(197, 160, 89, 0.05); cursor: pointer;">
+                 <h4 style="margin:0 0 4px 0;">Individual Talent</h4>
+                 <p class="meta" style="font-size: 0.8rem;">Actor, Crew, Artist looking for work.</p>
+               </div>
+               <div class="account-select-card mb-4" data-type="studio" style="padding: 16px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer;">
+                 <h4 style="margin:0 0 4px 0;">Production / Agency</h4>
+                 <p class="meta" style="font-size: 0.8rem;">Casting Director or Studio looking to hire.</p>
+               </div>
+               <label class="meta mb-2 block">Years of Industry Experience</label>
+               <input type="number" id="ob-exp" value="0" style="padding: 12px; width: 80px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
             </div>
-            <h2 style="font-size: 1.6rem; margin-bottom: 1rem;">Establish Trust.</h2>
-            <p class="meta" style="margin-bottom: 2rem; font-size: 1rem; line-height: 1.5;">Your starting Reliability
-              Score is <strong>50%</strong>. To unlock full access to The Stage, request a Vouch from a Director or
-              HOD you've worked with.</p>
-
-            <div
-              style="background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 2rem; margin-bottom: 2rem;">
-              <input type="email" placeholder="HOD's Professional Email (e.g., name@production.com)"
-                style="padding: 1rem; width: 100%; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); margin-bottom: 1rem;">
-              <button class="ghost full-width" style="padding: 0.8rem;">Send Vouch Request</button>
+            <div class="action-row">
+              <button class="ghost ob-prev-btn" style="flex: 1;">← Back</button>
+              <button class="primary ob-next-btn" style="flex: 2; padding: 14px; font-weight: 700;">Continue →</button>
             </div>
+          </div>
 
-            <button class="primary full-width" id="ob-finish-btn"
-              style="padding: 1rem; font-size: 1.1rem; background: var(--brand-gold); color: black;">Enter Kalakar
-              Dashboard</button>
+          <!-- Step 4: Showreel -->
+          <div id="ob-step-4" class="ob-step hidden">
+            <h4 class="meta mb-2" style="color: var(--brand-gold);">Step 4 of 4</h4>
+            <h2 style="font-size: 1.8rem; margin-bottom: 1.5rem;">Show your craft.</h2>
+            <p class="meta mb-4">Upload your primary showreel or performance video to get verified faster.</p>
+            <div id="ob-reel-drop" style="width: 100%; height: 200px; border: 2px dashed var(--line); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin-bottom: 2rem; cursor: pointer;">
+               <span style="font-size: 2rem;">📹</span>
+               <p class="meta">Upload Video (Max 100MB)</p>
+               <input type="file" id="ob-reel-input" hidden accept="video/*">
+            </div>
+            <button class="ghost mb-4 full-width" id="ob-skip-reel">Skip for now →</button>
+            <div class="action-row">
+              <button class="ghost ob-prev-btn" style="flex: 1;">← Back</button>
+              <button class="primary" id="ob-complete-btn" style="flex: 2; padding: 14px; font-weight: 700; background: var(--brand-gold); color: black;">Complete Setup ✦</button>
+            </div>
           </div>
 
         </div>

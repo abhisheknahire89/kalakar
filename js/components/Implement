@@ -1,0 +1,1498 @@
+# 🎬 KALAKAR — ULTIMATE MASTER BUILD PROMPT (v3)
+## Complete Frontend + Backend + Auth + Every Feature — From Zero to Production
+
+---
+
+## WHAT IS KALAKAR?
+
+Kalakar ("Artist" in Hindi) is a unified professional networking and casting platform for the Indian entertainment industry. It replaces WhatsApp groups, PDF resumes, and chaotic email threads with a single verified ecosystem. Think "LinkedIn meets Instagram & TikTok" — purpose-built for actors, directors, cinematographers, casting directors, editors, dancers, and production studios.
+
+**Two audiences:**
+1. **Talent:** Actors, DOPs, editors, dancers, writers, makeup artists — showcase raw talent through video reels instead of paper resumes.
+2. **Studios & Recruiters:** Casting directors and production houses who filter, contact, and negotiate with verified talent for location-specific shoots.
+
+---
+
+# ═══════════════════════════════════════════════════════
+# PART 1: COMPLETE BACKEND SETUP (Appwrite Cloud)
+# ═══════════════════════════════════════════════════════
+
+## 1.1 — Appwrite Project Credentials
+
+```
+Platform:      Appwrite Cloud (Frankfurt EU Region)
+API Endpoint:  https://fra.cloud.appwrite.io/v1
+Project ID:    69c8ee1b0037e381d046
+Database ID:   kalakar_db
+```
+
+All Appwrite SDK instances MUST use these exact values. Never use `cloud.appwrite.io` without the `fra.` prefix.
+
+---
+
+## 1.2 — AUTHENTICATION SETUP (Two Methods: Phone OTP + Google OAuth)
+
+Kalakar supports TWO login methods:
+1. **Phone OTP (Primary)** — Passwordless SMS login
+2. **Google OAuth (Secondary)** — One-tap Google sign-in
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### METHOD 1: PHONE OTP (Passwordless SMS Login)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#### Appwrite Console Setup:
+1. Go to **Appwrite Console** → Project → **Auth** → **Settings**
+2. Scroll down to **Security** section
+3. Enable **Phone Authentication** toggle
+4. **Mock Phone Numbers** (for testing without real SMS):
+   - Navigate to **Auth** → **Security** → **Mock Phone Numbers**
+   - Add test numbers:
+     ```
+     Phone: +919876543210    OTP: 123456
+     Phone: +919876543211    OTP: 654321
+     Phone: +919999999999    OTP: 111111
+     ```
+   - These mock numbers let you test the entire OTP flow without sending real SMS (which costs money after 10 free messages/month on paid plans)
+
+#### Frontend Phone OTP Code (`js/auth.js`):
+```javascript
+import { account, ID } from './appwriteClient.js';
+
+// ─── PHONE OTP AUTH ───────────────────────────────────
+
+/**
+ * Step 1: Send OTP to phone number
+ * @param {string} phone - Format: "+919876543210" (with country code)
+ * @returns {Object} token with userId needed for step 2
+ */
+export async function sendPhoneOTP(phone) {
+  try {
+    // createPhoneToken sends SMS and returns a token
+    // If phone number is new → creates account automatically
+    // If phone number exists → sends OTP to existing account
+    const token = await account.createPhoneToken(ID.unique(), phone);
+    return { success: true, userId: token.userId };
+  } catch (error) {
+    console.error('Send OTP failed:', error);
+    // Handle specific errors
+    if (error.code === 429) {
+      return { success: false, error: 'Too many attempts. Please wait and try again.' };
+    }
+    return { success: false, error: 'Failed to send OTP. Please check your number.' };
+  }
+}
+
+/**
+ * Step 2: Verify OTP and create session
+ * @param {string} userId - From step 1 response
+ * @param {string} otp - 6-digit code from SMS
+ * @returns {Object} session object
+ */
+export async function verifyPhoneOTP(userId, otp) {
+  try {
+    const session = await account.createSession(userId, otp);
+    return { success: true, session };
+  } catch (error) {
+    console.error('Verify OTP failed:', error);
+    if (error.code === 401) {
+      return { success: false, error: 'Invalid OTP. Please try again.' };
+    }
+    if (error.code === 410) {
+      return { success: false, error: 'OTP has expired. Please request a new one.' };
+    }
+    return { success: false, error: 'Verification failed. Please try again.' };
+  }
+}
+```
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### METHOD 2: GOOGLE OAuth 2.0 (One-Tap Sign In)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#### Step A: Google Cloud Console Setup
+
+1. Go to **https://console.cloud.google.com/**
+2. Sign in with a Google account
+3. **Create a new project** (or select existing):
+   - Click the project dropdown at top → "New Project"
+   - Name: `Kalakar`
+   - Click "Create"
+
+4. **Configure OAuth Consent Screen:**
+   - Left sidebar → "APIs & Services" → "OAuth consent screen"
+   - Select **External** (available to any Google account) → Click "Create"
+   - Fill in:
+     - App name: `Kalakar`
+     - User support email: your email
+     - Developer contact: your email
+   - Click "Save and Continue"
+   - **Scopes:** Click "Add or Remove Scopes" → add:
+     - `openid`
+     - `../auth/userinfo.email`
+     - `../auth/userinfo.profile`
+   - Click "Save and Continue"
+   - **Test users:** Add your own email for testing
+   - Click "Save and Continue" → "Back to Dashboard"
+
+5. **Create OAuth 2.0 Client ID:**
+   - Left sidebar → "APIs & Services" → "Credentials"
+   - Click "Create Credentials" → "OAuth client ID"
+   - Application type: **Web application**
+   - Name: `Kalakar Web`
+   - **Authorized redirect URIs:** Add the redirect URI from Appwrite (see Step B below — you'll come back to add this)
+   - Click "Create"
+   - **COPY the Client ID and Client Secret** — you'll need these
+
+#### Step B: Appwrite Console Setup
+
+1. Go to **Appwrite Console** → your Kalakar project
+2. Navigate to **Auth** → **Settings** tab
+3. Scroll down to **OAuth2 Providers** section
+4. Find **Google** (providers are listed alphabetically) → Click it
+5. In the popup modal:
+   - **Toggle the switch to ENABLE** Google OAuth
+   - **App ID:** Paste your Google OAuth **Client ID** from Step A
+   - **App Secret:** Paste your Google OAuth **Client Secret** from Step A
+   - **COPY the redirect URI** shown at the bottom of this modal (it will look like `https://fra.cloud.appwrite.io/v1/account/sessions/oauth2/callback/google/69c8ee1b0037e381d046`)
+   - Click **Update/Save**
+6. **Go back to Google Cloud Console** → Credentials → your OAuth Client ID → Edit
+7. Add the Appwrite redirect URI you just copied to **Authorized redirect URIs**
+8. Save
+
+#### Step C: Add Web Platform in Appwrite
+
+1. Go to **Appwrite Console** → Project → **Overview** (home page)
+2. Under "Integrate with your server" or "Platforms", click **Add Platform** → **Web App**
+3. Enter:
+   - Name: `Kalakar Web`
+   - Hostname: `localhost` (for development)
+   - Add additional hostnames for production: your domain (e.g., `kalakar.app`)
+4. Save
+
+#### Frontend Google OAuth Code (`js/auth.js` — add to existing file):
+```javascript
+import { account, client, OAuthProvider } from './appwriteClient.js';
+
+// ─── GOOGLE OAuth LOGIN ───────────────────────────────
+
+/**
+ * Initiate Google OAuth login
+ * Opens Google's consent screen in a popup/redirect
+ * After successful auth, user is redirected back to the app with a session
+ */
+export async function loginWithGoogle() {
+  try {
+    // createOAuth2Session redirects the user to Google's login page
+    // After successful login, Google redirects back to Appwrite
+    // Appwrite then redirects back to your app with an active session
+    account.createOAuth2Session(
+      OAuthProvider.Google,                        // Provider
+      'http://localhost:8081/#stage',               // Success redirect URL (your app's home)
+      'http://localhost:8081/#login',               // Failure redirect URL
+      [
+        'openid',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+      ]  // Scopes
+    );
+    // NOTE: This function redirects the browser — code after this won't execute
+    // The user will return to the success URL with an active session
+  } catch (error) {
+    console.error('Google OAuth failed:', error);
+    showToast('Google sign-in failed. Please try again.', 'error');
+  }
+}
+
+/**
+ * Alternative: Google OAuth with popup (if you don't want full redirect)
+ * Uses createOAuth2Token for more control
+ */
+export async function loginWithGooglePopup() {
+  try {
+    // This opens a popup window for Google login
+    const result = await account.createOAuth2Token(
+      OAuthProvider.Google,
+      'http://localhost:8081/#oauth-callback',  // Callback URL
+      'http://localhost:8081/#login'             // Failure URL
+    );
+    // After the popup closes and redirects to callback:
+    // Extract userId and secret from URL params
+    // Then create session:
+    // const session = await account.createSession(userId, secret);
+    return result;
+  } catch (error) {
+    console.error('Google OAuth popup failed:', error);
+    showToast('Google sign-in failed. Please try again.', 'error');
+  }
+}
+```
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### COMBINED AUTH MODULE (`js/auth.js` — Complete File)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```javascript
+// js/auth.js — Complete Authentication Module
+import { account, databases, storage, ID, Query, DATABASE_ID, COLLECTIONS, BUCKETS } from './appwriteClient.js';
+
+// ═══════════════════════════════════
+// SESSION MANAGEMENT
+// ═══════════════════════════════════
+
+/**
+ * Check if user has an active session
+ * Call this on app load to determine if user is logged in
+ */
+export async function getCurrentUser() {
+  try {
+    const user = await account.get();
+    return user;
+  } catch (error) {
+    // No active session — user is not logged in
+    return null;
+  }
+}
+
+/**
+ * Check if user has a creator profile (completed onboarding)
+ */
+export async function getCreatorProfile(userId) {
+  try {
+    const result = await databases.listDocuments(DATABASE_ID, COLLECTIONS.CREATORS, [
+      Query.equal('userId', userId),
+      Query.limit(1)
+    ]);
+    return result.documents.length > 0 ? result.documents[0] : null;
+  } catch (error) {
+    console.error('Failed to fetch creator profile:', error);
+    return null;
+  }
+}
+
+/**
+ * Logout — destroy current session
+ */
+export async function logout() {
+  try {
+    await account.deleteSession('current');
+    return { success: true };
+  } catch (error) {
+    console.error('Logout failed:', error);
+    return { success: false, error: 'Logout failed.' };
+  }
+}
+
+// ═══════════════════════════════════
+// PHONE OTP AUTHENTICATION
+// ═══════════════════════════════════
+
+/**
+ * Step 1: Send OTP to phone number
+ * Format: "+919876543210" (with +91 country code for India)
+ * If phone is new → creates account automatically
+ * If phone exists → sends OTP to existing account
+ */
+export async function sendPhoneOTP(phone) {
+  try {
+    const token = await account.createPhoneToken(ID.unique(), phone);
+    return { success: true, userId: token.userId };
+  } catch (error) {
+    console.error('Send OTP failed:', error);
+    if (error.code === 429) {
+      return { success: false, error: 'Too many attempts. Wait 60 seconds and try again.' };
+    }
+    if (error.code === 400) {
+      return { success: false, error: 'Invalid phone number format. Use +91XXXXXXXXXX.' };
+    }
+    return { success: false, error: 'Failed to send OTP. Please check your number and try again.' };
+  }
+}
+
+/**
+ * Step 2: Verify OTP and create session
+ * userId: from sendPhoneOTP response
+ * otp: 6-digit code user received via SMS (or mock code for test numbers)
+ */
+export async function verifyPhoneOTP(userId, otp) {
+  try {
+    const session = await account.createSession(userId, otp);
+    return { success: true, session };
+  } catch (error) {
+    console.error('Verify OTP failed:', error);
+    if (error.code === 401) {
+      return { success: false, error: 'Invalid OTP code. Please check and try again.' };
+    }
+    if (error.code === 410) {
+      return { success: false, error: 'OTP expired. Please request a new one.' };
+    }
+    return { success: false, error: 'Verification failed. Please try again.' };
+  }
+}
+
+// ═══════════════════════════════════
+// GOOGLE OAuth 2.0 AUTHENTICATION
+// ═══════════════════════════════════
+
+/**
+ * Login with Google — Full page redirect flow
+ * Redirects to Google consent screen → user logs in → redirected back to app
+ * Appwrite automatically creates/links the account
+ *
+ * IMPORTANT: Update success/failure URLs when deploying to production!
+ */
+export function loginWithGoogle() {
+  try {
+    account.createOAuth2Session(
+      'google',                                    // Provider ID
+      window.location.origin + '/#stage',          // Success: redirect to Stage feed
+      window.location.origin + '/#login',          // Failure: redirect back to login
+      [
+        'openid',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+      ]
+    );
+    // This redirects the browser — no code after this executes
+  } catch (error) {
+    console.error('Google OAuth failed:', error);
+  }
+}
+
+// ═══════════════════════════════════
+// ONBOARDING — Create Creator Profile
+// ═══════════════════════════════════
+
+/**
+ * After first login (OTP or Google), create the user's profile
+ * Called at the end of the onboarding wizard
+ */
+export async function createCreatorProfile(profileData) {
+  try {
+    const user = await account.get();
+
+    const profile = await databases.createDocument(
+      DATABASE_ID,
+      COLLECTIONS.CREATORS,
+      ID.unique(),
+      {
+        userId: user.$id,
+        name: profileData.name || user.name || '',
+        avatarFileId: profileData.avatarFileId || '',
+        coverFileId: '',
+        headline: profileData.headline || '',
+        bio: '',
+        city: profileData.city || '',
+        state: profileData.state || '',
+        primaryCraft: profileData.primaryCraft || 'actor',
+        secondaryCrafts: [],
+        yearsExperience: profileData.yearsExperience || 0,
+        availability: 'available',
+        unions: [],
+        physicalAttributes: '{}',
+        languages: JSON.stringify(profileData.languages || []),
+        skills: [],
+        training: '[]',
+        socialLinks: '{}',
+        contactPrefs: JSON.stringify({ openToMessages: true, openToCasting: true, openToCollabs: true }),
+        profileViews: 0,
+        impressions: 0,
+        vouchCount: 0,
+        isVerified: false,
+        accountType: profileData.accountType || 'talent',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    );
+
+    return { success: true, profile };
+  } catch (error) {
+    console.error('Create profile failed:', error);
+    return { success: false, error: 'Failed to create profile. Please try again.' };
+  }
+}
+
+/**
+ * Upload avatar image during onboarding
+ */
+export async function uploadAvatar(file) {
+  try {
+    const response = await storage.createFile(BUCKETS.AVATARS, ID.unique(), file);
+    return { success: true, fileId: response.$id };
+  } catch (error) {
+    console.error('Avatar upload failed:', error);
+    return { success: false, error: 'Failed to upload photo.' };
+  }
+}
+
+/**
+ * Get file preview/download URL from storage
+ */
+export function getFilePreview(fileId, width = 200, height = 200) {
+  if (!fileId) return '/assets/placeholders/default-avatar.svg';
+  return storage.getFilePreview(BUCKETS.AVATARS, fileId, width, height).href;
+}
+
+export function getFileView(fileId) {
+  if (!fileId) return '';
+  return storage.getFileView(BUCKETS.AVATARS, fileId).href;
+}
+```
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### APP BOOT SEQUENCE (`js/app.js`)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```javascript
+// js/app.js — Application Entry Point
+import { navigateTo } from './router.js';
+import { getCurrentUser, getCreatorProfile } from './auth.js';
+import { initNotificationListener, initMessageListener, fetchUnreadCount } from './api/notifications.js';
+
+let currentUser = null;
+let currentProfile = null;
+
+async function boot() {
+  // 1. Check if user has an active session
+  currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    // No session — show login screen
+    navigateTo('login');
+    initLoginView();
+    return;
+  }
+
+  // 2. Check if user has completed onboarding (has a creator profile)
+  currentProfile = await getCreatorProfile(currentUser.$id);
+
+  if (!currentProfile) {
+    // Logged in but no profile — show onboarding wizard
+    navigateTo('onboarding');
+    initOnboardingView();
+    return;
+  }
+
+  // 3. Fully authenticated + onboarded — boot the main app
+  initMainApp();
+}
+
+function initMainApp() {
+  // Show the app shell (nav bars, sidebars)
+  document.getElementById('app-shell').classList.add('active');
+
+  // Navigate to Stage (home feed)
+  const initialView = location.hash.replace('#', '') || 'stage';
+  navigateTo(initialView);
+
+  // Initialize real-time listeners (AFTER auth — they need a session)
+  initNotificationListener(currentUser.$id);
+  initMessageListener(currentUser.$id);
+  fetchUnreadCount(currentUser.$id);
+
+  // Populate nav bar with user info
+  updateNavProfile(currentProfile);
+}
+
+// Boot the app when DOM is ready
+document.addEventListener('DOMContentLoaded', boot);
+
+// Export for use in other modules
+export { currentUser, currentProfile };
+```
+
+---
+
+## 1.3 — LOGIN & ONBOARDING UI
+
+### Login Screen (`data-view="login"`):
+```
+┌──────────────────────────────────────┐
+│                                      │
+│           ✦ kalakar ✦               │
+│    "Where talent meets the screen"   │
+│                                      │
+│  ─── Sign in with Phone ───         │
+│                                      │
+│  [+91 ▼] [Phone number          ]  │
+│                                      │
+│  [        Send OTP          ]       │  ← Gold button, full width
+│                                      │
+│  ──────── or ────────               │
+│                                      │
+│  [G  Continue with Google   ]       │  ← White button with Google icon
+│                                      │
+│  By continuing, you agree to our    │
+│  Terms of Service & Privacy Policy   │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+**Implementation:**
+```html
+<section data-view="login" class="login-view">
+  <div class="login-container glass-panel">
+    <div class="login-logo">
+      <img src="/assets/logo/kalakar-gold.svg" alt="Kalakar" height="48">
+      <p class="login-tagline">Where talent meets the screen</p>
+    </div>
+
+    <!-- Phone OTP Form -->
+    <div id="phone-form" class="login-section">
+      <h3 class="text-label" style="color: var(--text-muted);">Sign in with Phone</h3>
+
+      <div class="phone-input-group">
+        <select id="country-code" class="input-field input-field--sm">
+          <option value="+91" selected>+91 🇮🇳</option>
+          <option value="+1">+1 🇺🇸</option>
+          <option value="+44">+44 🇬🇧</option>
+          <option value="+971">+971 🇦🇪</option>
+        </select>
+        <input
+          type="tel"
+          id="phone-input"
+          class="input-field"
+          placeholder="Phone number"
+          maxlength="10"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          autocomplete="tel"
+        >
+      </div>
+
+      <button id="send-otp-btn" class="btn-gold btn-full" onclick="handleSendOTP()">
+        Send OTP
+      </button>
+    </div>
+
+    <!-- OTP Verification (hidden initially) -->
+    <div id="otp-form" class="login-section" style="display: none;">
+      <p class="text-body">Enter the 6-digit code sent to<br>
+        <strong id="otp-phone-display">+91 98765 43210</strong>
+      </p>
+
+      <div class="otp-inputs" id="otp-inputs">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="0" autofocus>
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="1">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="2">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="3">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="4">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="5">
+      </div>
+
+      <button id="verify-otp-btn" class="btn-gold btn-full" onclick="handleVerifyOTP()">
+        Verify
+      </button>
+
+      <p class="text-caption" style="text-align: center; margin-top: var(--space-md);">
+        <span id="resend-timer">Resend in 0:30</span>
+        <button id="resend-btn" class="btn-ghost" style="display: none;" onclick="handleResendOTP()">
+          Resend OTP
+        </button>
+      </p>
+
+      <button class="btn-ghost" onclick="showPhoneForm()" style="margin-top: var(--space-sm);">
+        ← Change number
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div class="login-divider">
+      <span>or</span>
+    </div>
+
+    <!-- Google OAuth Button -->
+    <button id="google-btn" class="btn-google btn-full" onclick="handleGoogleLogin()">
+      <svg width="18" height="18" viewBox="0 0 18 18">
+        <!-- Google G logo SVG -->
+        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"/>
+        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"/>
+        <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"/>
+        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 2.58 9 2.58Z"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <p class="login-terms text-caption">
+      By continuing, you agree to our
+      <a href="#terms">Terms of Service</a> &
+      <a href="#privacy">Privacy Policy</a>
+    </p>
+  </div>
+</section>
+```
+
+### Login JS Controller (`js/views/login.js`):
+```javascript
+import { sendPhoneOTP, verifyPhoneOTP, loginWithGoogle, getCurrentUser, getCreatorProfile } from '../auth.js';
+import { navigateTo } from '../router.js';
+import { showToast } from '../components/toast.js';
+
+let otpUserId = null;
+let resendCountdown = null;
+
+// ─── PHONE OTP FLOW ─────────────────
+
+export async function handleSendOTP() {
+  const countryCode = document.getElementById('country-code').value;
+  const phoneNumber = document.getElementById('phone-input').value.trim();
+
+  if (!phoneNumber || phoneNumber.length < 10) {
+    showToast('Please enter a valid 10-digit phone number.', 'warning');
+    return;
+  }
+
+  const fullPhone = countryCode + phoneNumber;
+  const btn = document.getElementById('send-otp-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  const result = await sendPhoneOTP(fullPhone);
+
+  if (result.success) {
+    otpUserId = result.userId;
+    // Show OTP form
+    document.getElementById('phone-form').style.display = 'none';
+    document.getElementById('otp-form').style.display = 'block';
+    document.getElementById('otp-phone-display').textContent =
+      fullPhone.replace(/(\+\d{2})(\d{5})(\d{5})/, '$1 $2 $3');
+    // Focus first OTP digit
+    document.querySelector('.otp-digit[data-index="0"]').focus();
+    // Start resend countdown
+    startResendCountdown(30);
+    showToast('OTP sent to your phone!', 'success');
+  } else {
+    showToast(result.error, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Send OTP';
+}
+
+export async function handleVerifyOTP() {
+  const digits = document.querySelectorAll('.otp-digit');
+  const otp = Array.from(digits).map(d => d.value).join('');
+
+  if (otp.length !== 6) {
+    showToast('Please enter all 6 digits.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('verify-otp-btn');
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+
+  const result = await verifyPhoneOTP(otpUserId, otp);
+
+  if (result.success) {
+    showToast('Login successful!', 'success');
+    await handlePostLogin();
+  } else {
+    showToast(result.error, 'error');
+    // Clear OTP inputs
+    digits.forEach(d => { d.value = ''; });
+    digits[0].focus();
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Verify';
+}
+
+// ─── OTP INPUT AUTO-ADVANCE ─────────
+
+export function initOTPInputs() {
+  const digits = document.querySelectorAll('.otp-digit');
+
+  digits.forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+      const value = e.target.value;
+      if (value && index < 5) {
+        digits[index + 1].focus();
+      }
+      // Auto-submit when all 6 digits entered
+      if (index === 5 && value) {
+        handleVerifyOTP();
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !input.value && index > 0) {
+        digits[index - 1].focus();
+      }
+    });
+
+    // Handle paste (user pastes full 6-digit OTP)
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = e.clipboardData.getData('text').trim();
+      if (/^\d{6}$/.test(pasted)) {
+        digits.forEach((d, i) => { d.value = pasted[i]; });
+        digits[5].focus();
+        handleVerifyOTP();
+      }
+    });
+  });
+}
+
+// ─── RESEND COUNTDOWN ────────────────
+
+function startResendCountdown(seconds) {
+  let remaining = seconds;
+  const timerEl = document.getElementById('resend-timer');
+  const resendBtn = document.getElementById('resend-btn');
+
+  timerEl.style.display = 'inline';
+  resendBtn.style.display = 'none';
+
+  clearInterval(resendCountdown);
+  resendCountdown = setInterval(() => {
+    remaining--;
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    timerEl.textContent = `Resend in ${mins}:${secs.toString().padStart(2, '0')}`;
+
+    if (remaining <= 0) {
+      clearInterval(resendCountdown);
+      timerEl.style.display = 'none';
+      resendBtn.style.display = 'inline';
+    }
+  }, 1000);
+}
+
+export async function handleResendOTP() {
+  const phone = document.getElementById('otp-phone-display').textContent.replace(/\s/g, '');
+  const result = await sendPhoneOTP(phone);
+  if (result.success) {
+    otpUserId = result.userId;
+    showToast('New OTP sent!', 'success');
+    startResendCountdown(30);
+  } else {
+    showToast(result.error, 'error');
+  }
+}
+
+export function showPhoneForm() {
+  document.getElementById('phone-form').style.display = 'block';
+  document.getElementById('otp-form').style.display = 'none';
+  clearInterval(resendCountdown);
+}
+
+// ─── GOOGLE OAuth FLOW ──────────────
+
+export function handleGoogleLogin() {
+  // Show loading state
+  const btn = document.getElementById('google-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Connecting to Google...';
+  loginWithGoogle();
+  // Browser will redirect — no need to handle response here
+}
+
+// ─── POST-LOGIN ROUTING ─────────────
+
+async function handlePostLogin() {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  const profile = await getCreatorProfile(user.$id);
+
+  if (!profile) {
+    // New user — needs onboarding
+    navigateTo('onboarding');
+  } else {
+    // Returning user — go to Stage
+    navigateTo('stage');
+    // Reload the app to init everything
+    window.location.reload();
+  }
+}
+```
+
+### Login CSS (`css/auth.css`):
+```css
+.login-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-lg);
+  background: var(--bg-void);
+}
+
+.login-container {
+  max-width: 420px;
+  width: 100%;
+  padding: var(--space-2xl);
+  text-align: center;
+}
+
+.login-logo img {
+  margin-bottom: var(--space-sm);
+}
+
+.login-tagline {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: var(--space-xl);
+}
+
+.phone-input-group {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.phone-input-group select {
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.phone-input-group input {
+  flex: 1;
+}
+
+.input-field {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-size: 16px; /* Prevents iOS zoom on focus */
+  width: 100%;
+  transition: border-color var(--duration);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+.btn-full {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+}
+
+/* OTP Digit Inputs */
+.otp-inputs {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: center;
+  margin: var(--space-lg) 0;
+}
+
+.otp-digit {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration);
+}
+
+.otp-digit:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+/* Google Button */
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  background: #ffffff;
+  color: #1f1f1f;
+  font-weight: 600;
+  border: 1px solid #dadce0;
+  border-radius: var(--radius-full);
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all var(--duration);
+}
+
+.btn-google:hover {
+  background: #f7f8f8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Divider */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin: var(--space-xl) 0;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-strong);
+}
+
+.login-divider span {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.login-terms {
+  margin-top: var(--space-lg);
+}
+
+.login-terms a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+```
+
+---
+
+## 1.4 — ONBOARDING WIZARD (`data-view="onboarding"`)
+
+Multi-step wizard for first-time users (both Phone OTP and Google OAuth).
+
+```
+Step 1 of 4: "What do you do?"
+┌──────────────────────────────────────┐
+│  ✦ Welcome to Kalakar               │
+│                                      │
+│  What's your primary craft?          │
+│                                      │
+│  [🎭 Actor     ] [🎬 Director    ]  │
+│  [📷 DOP       ] [✂️ Editor      ]  │
+│  [💃 Dancer    ] [✍️ Writer      ]  │
+│  [🎵 Musician  ] [💄 Makeup      ]  │
+│  [👗 Costume   ] [🎨 Art Director]  │
+│  [🔊 Sound     ] [🖥 VFX         ]  │
+│  [🎪 Producer  ] [💡 Gaffer      ]  │
+│                                      │
+│  ● ○ ○ ○                            │
+│                        [Next →]      │
+└──────────────────────────────────────┘
+
+Step 2 of 4: "Tell us about you"
+┌──────────────────────────────────────┐
+│  Your Name: [________________]      │
+│  City:      [Mumbai ▼]             │
+│  State:     [Maharashtra ▼]        │
+│                                      │
+│  Profile Photo:                      │
+│  [📷 Upload Photo]                  │
+│  (or skip for now)                   │
+│                                      │
+│  ● ● ○ ○                            │
+│  [← Back]              [Next →]      │
+└──────────────────────────────────────┘
+
+Step 3 of 4: "How do you work?"
+┌──────────────────────────────────────┐
+│  I am:                               │
+│  (•) Talent / Artist                 │
+│  ( ) Studio / Production House       │
+│  ( ) Casting Director / Recruiter    │
+│                                      │
+│  Years of Experience:                │
+│  [5 ▼]                              │
+│                                      │
+│  ● ● ● ○                            │
+│  [← Back]              [Next →]      │
+└──────────────────────────────────────┘
+
+Step 4 of 4: "Show your craft"
+┌──────────────────────────────────────┐
+│  Upload your first showreel          │
+│                                      │
+│  [📹 Upload Video]                  │
+│  Max 3 minutes, up to 100MB          │
+│                                      │
+│  (or)                                │
+│  [Skip for now →]                    │
+│                                      │
+│  ● ● ● ●                            │
+│  [← Back]        [Complete Setup ✦]  │
+└──────────────────────────────────────┘
+```
+
+On "Complete Setup": Call `createCreatorProfile()` with all collected data → navigate to Stage feed → show welcome toast.
+
+If user signed in with Google: pre-fill name from Google account data (`user.name`).
+
+---
+
+## 1.5 — APPWRITE CLIENT MODULE (`js/appwriteClient.js`)
+
+```javascript
+import { Client, Account, Databases, Storage, Query, ID } from 'appwrite';
+
+const client = new Client()
+  .setEndpoint('https://fra.cloud.appwrite.io/v1')
+  .setProject('69c8ee1b0037e381d046');
+
+export const account  = new Account(client);
+export const databases = new Databases(client);
+export const storage  = new Storage(client);
+export { client, Query, ID };
+
+// ═══════════════════════════════════
+// DATABASE ID
+// ═══════════════════════════════════
+export const DATABASE_ID = 'kalakar_db';
+
+// ═══════════════════════════════════
+// ALL 17 COLLECTION IDS
+// ═══════════════════════════════════
+export const COLLECTIONS = {
+  CREATORS:         'creators',
+  STUDIOS:          'studios',
+  POSTS:            'posts',
+  COMMENTS:         'comments',
+  APPLAUDS:         'applauds',
+  CONNECTIONS:      'connections',
+  VOUCHES:          'vouches',
+  CREDITS:          'credits',
+  JOBS:             'jobs',
+  APPLICATIONS:     'applications',
+  CONVERSATIONS:    'conversations',
+  MESSAGES:         'messages',
+  CONTRACTS:        'contracts',
+  NOTIFICATIONS:    'notifications',
+  WEEKLY_PROMPTS:   'weeklyPrompts',
+  SAVED_ITEMS:      'savedItems',
+  JOB_ALERT_PREFS:  'jobAlertPreferences',
+};
+
+// ═══════════════════════════════════
+// STORAGE BUCKET (Single consolidated bucket)
+// ═══════════════════════════════════
+export const BUCKETS = {
+  AVATARS: 'avatars',  // ALL file uploads go here
+};
+```
+
+**RULE:** Every Appwrite API call in the entire codebase MUST use these constants. Never write `'creators'` or `'kalakar_db'` as raw strings in listDocuments/createDocument/etc.
+
+---
+
+## 1.6 — INIT SCRIPT: Provision ALL Collections + Bucket (`scripts/initAppwrite.js`)
+
+Create a Node.js script that provisions the entire Appwrite backend:
+
+```javascript
+// scripts/initAppwrite.js
+// Run: cd scripts && npm install node-appwrite && node initAppwrite.js
+
+const sdk = require('node-appwrite');
+
+const client = new sdk.Client()
+  .setEndpoint('https://fra.cloud.appwrite.io/v1')
+  .setProject('69c8ee1b0037e381d046')
+  .setKey('YOUR_API_KEY_HERE');  // ← Replace with your actual API key
+
+const databases = new sdk.Databases(client);
+const storage   = new sdk.Storage(client);
+
+const DATABASE_ID = 'kalakar_db';
+
+async function init() {
+  console.log('🎬 Kalakar — Provisioning Appwrite Backend...\n');
+
+  // ── Step 1: Create Database ──
+  try {
+    await databases.create(DATABASE_ID, 'Kalakar DB');
+    console.log('✅ Database created: kalakar_db');
+  } catch (e) {
+    if (e.code === 409) console.log('⚠️  Database already exists: kalakar_db');
+    else throw e;
+  }
+
+  // ── Step 2: Create Collections ──
+  const collections = [
+    { id: 'creators', name: 'Creators', attrs: [
+      { key: 'userId', type: 'string', size: 36, required: true },
+      { key: 'name', type: 'string', size: 200, required: true },
+      { key: 'avatarFileId', type: 'string', size: 36, required: false },
+      { key: 'coverFileId', type: 'string', size: 36, required: false },
+      { key: 'headline', type: 'string', size: 200, required: false },
+      { key: 'bio', type: 'string', size: 500, required: false },
+      { key: 'city', type: 'string', size: 100, required: false },
+      { key: 'state', type: 'string', size: 100, required: false },
+      { key: 'primaryCraft', type: 'string', size: 50, required: true },
+      { key: 'secondaryCrafts', type: 'stringArray', required: false },
+      { key: 'yearsExperience', type: 'integer', required: false },
+      { key: 'availability', type: 'string', size: 20, required: false },
+      { key: 'unions', type: 'stringArray', required: false },
+      { key: 'physicalAttributes', type: 'string', size: 2000, required: false },
+      { key: 'languages', type: 'string', size: 2000, required: false },
+      { key: 'skills', type: 'stringArray', required: false },
+      { key: 'training', type: 'string', size: 2000, required: false },
+      { key: 'socialLinks', type: 'string', size: 2000, required: false },
+      { key: 'contactPrefs', type: 'string', size: 1000, required: false },
+      { key: 'profileViews', type: 'integer', required: false, default: 0 },
+      { key: 'impressions', type: 'integer', required: false, default: 0 },
+      { key: 'vouchCount', type: 'integer', required: false, default: 0 },
+      { key: 'isVerified', type: 'boolean', required: false, default: false },
+      { key: 'accountType', type: 'string', size: 20, required: false },
+      { key: 'createdAt', type: 'string', size: 30, required: true },
+      { key: 'updatedAt', type: 'string', size: 30, required: true },
+    ]},
+    // ... (Create ALL 17 collections with full attribute schemas)
+    // Include: studios, posts, comments, applauds, connections, vouches,
+    // credits, jobs, applications, conversations, messages, contracts,
+    // notifications, weeklyPrompts, savedItems, jobAlertPreferences
+    // Use the EXACT schemas defined in the database section below
+  ];
+
+  for (const col of collections) {
+    try {
+      await databases.createCollection(DATABASE_ID, col.id, col.name);
+      console.log(`✅ Collection created: ${col.name}`);
+
+      // Set permissions: any authenticated user can read/write
+      // (tighten in production with document-level permissions)
+
+      // Create attributes
+      for (const attr of col.attrs) {
+        try {
+          if (attr.type === 'string') {
+            await databases.createStringAttribute(DATABASE_ID, col.id, attr.key, attr.size, attr.required, attr.default || null);
+          } else if (attr.type === 'integer') {
+            await databases.createIntegerAttribute(DATABASE_ID, col.id, attr.key, attr.required, attr.min || null, attr.max || null, attr.default || null);
+          } else if (attr.type === 'boolean') {
+            await databases.createBooleanAttribute(DATABASE_ID, col.id, attr.key, attr.required, attr.default || null);
+          } else if (attr.type === 'stringArray') {
+            await databases.createStringAttribute(DATABASE_ID, col.id, attr.key, 200, attr.required, null, true); // array = true
+          }
+          console.log(`   ✅ Attribute: ${attr.key}`);
+        } catch (e) {
+          if (e.code === 409) console.log(`   ⚠️  Attribute exists: ${attr.key}`);
+          else console.log(`   ❌ Attribute failed: ${attr.key} — ${e.message}`);
+        }
+      }
+    } catch (e) {
+      if (e.code === 409) console.log(`⚠️  Collection already exists: ${col.name}`);
+      else console.log(`❌ Collection failed: ${col.name} — ${e.message}`);
+    }
+  }
+
+  // ── Step 3: Create Storage Bucket ──
+  try {
+    await storage.createBucket(
+      'avatars',
+      'Avatars & Media',
+      undefined, // permissions
+      false,     // fileSecurity
+      true,      // enabled
+      104857600, // maxFileSize: 100MB
+      ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm', 'mov', 'pdf', 'doc', 'docx'],
+      'none',    // compression
+      false,     // encryption
+      false      // antivirus
+    );
+    console.log('✅ Storage bucket created: avatars');
+  } catch (e) {
+    if (e.code === 409) console.log('⚠️  Bucket already exists: avatars');
+    else console.log(`❌ Bucket failed: ${e.message}`);
+  }
+
+  console.log('\n🎬 Kalakar backend provisioning complete!');
+}
+
+init().catch(err => {
+  console.error('❌ Fatal error:', err);
+  process.exit(1);
+});
+```
+
+**The init script must create ALL 17 collections with their COMPLETE attribute schemas and ALL indexes as defined in the database section. Do not leave any collection partially created.**
+
+---
+
+# ═══════════════════════════════════════════════════════
+# PART 2: COMPLETE FRONTEND (All Views & Components)
+# ═══════════════════════════════════════════════════════
+
+Now build the FULL frontend. Everything below uses the auth system and Appwrite backend from Part 1.
+
+## IMPORTANT: Reference the FULL feature specifications from the original build prompts. Here is a summary of every view to build:
+
+---
+
+## 2.1 — DESIGN SYSTEM ("Cinematic Dark Mode" + Glassmorphism)
+
+Use ALL the CSS variables, glassmorphism patterns, component styles, typography scale, and animation patterns defined in the design system section of this prompt (see Part 1 above for the full CSS). The app must have:
+- Dark mode default (bg: #0f0f11)
+- Glassmorphism panels (backdrop-filter blur + translucent borders)
+- Kalakar Gold (#d4a843) accent everywhere
+- 8px spacing grid
+- Inter/Poppins fonts
+- Smooth transitions with cubic-bezier easing
+
+---
+
+## 2.2 — APP SHELL & NAVIGATION
+
+Build the complete application shell with:
+
+### Top Navigation Bar (Desktop):
+```
+[kalakar logo] [🔍 Search]  Home  Network  Jobs  Messaging  Notifications  Me▼  [💬][🔔]
+```
+- Notification badges (red/gold dots with count)
+- "Me" dropdown: View Profile, Settings, Saved (12), Sign Out
+- Search bar with global search
+
+### Bottom Navigation Bar (Mobile ≤767px):
+```
+🏠 Stage  |  👥 Network  |  [✦] Post  |  💼 Jobs  |  👤 Me
+```
+- Fixed at bottom, 56px height
+- Center FAB elevated for post creation
+- Active tab highlighted in gold
+- Safe area insets for notched phones
+
+### Routing: `data-view` DOM toggling system as described.
+
+---
+
+## 2.3 — VIEW: THE STAGE (data-view="stage") — Video-First Feed
+
+**Build the COMPLETE Stage view including:**
+- Custom video player component (autoplay on scroll, IntersectionObserver, controls overlay, lazy-load, aspect ratio detection, mobile touch gestures)
+- Post composer (desktop: centered modal, mobile: full-screen bottom sheet, video/photo/link upload with Appwrite Storage progress, hashtag/mention detection, weekly prompt linking, thumbnail generation)
+- Stage feed with infinite scroll, cursor pagination
+- Filter pill tabs (For You, Following, Actors, Cinematographers, Editors, Directors, etc.)
+- Weekly Prompt banner (gold-bordered card at top of feed)
+- Post cards with video player, applaud/comment/share/save actions
+- Skeleton loaders, pull-to-refresh, empty state
+- Left sidebar (desktop): profile card, stats, find talent widget
+- Right sidebar (desktop): MH Hiring Pulse, Job Alerts CTA, Trending Talent
+
+---
+
+## 2.4 — VIEW: NETWORK (data-view="network")
+
+**Build the COMPLETE Network view including:**
+- Sub-tabs: My Network, Requests, Discover, Vouches
+- Connection request cards with Accept/Ignore
+- Discover grid (People You May Know based on city, craft, mutuals)
+- Connection flow: send request → notification → accept/reject
+- Vouch tab showing received/given vouches
+
+---
+
+## 2.5 — VIEW: JOBS & CASTING BOARD (data-view="jobs")
+
+**Build the COMPLETE Jobs view including:**
+- Sub-tabs: All Jobs, Casting Calls, Crew Hiring, Urgent, My Applications, Posted Jobs
+- Job listing cards with all details
+- Post a Job form (full fields)
+- Application flow (apply modal, status tracking)
+- Kanban drag-and-drop board for recruiter applicant tracking (HTML5 DnD on desktop, "Move to" dropdown on mobile)
+- My Applications tracking with real-time status updates
+
+---
+
+## 2.6 — VIEW: MESSAGING — Negotiation Workspace (data-view="messages")
+
+**Build the COMPLETE Messaging view including:**
+- Conversation list (desktop: side panel, mobile: full-width list → tap to open chat)
+- Chat window with real-time messages via Appwrite Realtime
+- Sent/received bubble styling (gold-tinted sent, glass received)
+- File/image/video sharing
+- Read receipts, typing indicators, message reactions
+- Group chats
+- Smart Contract Builder (template-based deal memos injected into chat)
+- Contract Cards in chat (Accept/Counter/Decline)
+- Escrow Milestone Widget (payment tracking with status indicators)
+- Contract negotiation flow with version history
+
+---
+
+## 2.7 — VIEW: NOTIFICATIONS (data-view="notifications")
+
+**Build the COMPLETE Notifications view including:**
+- Filter tabs: All, Jobs, Network, Posts, Deals
+- Notifications grouped by date (Today, Yesterday, This Week, Earlier)
+- Unread/read indicators
+- Mark all as read
+- Click to navigate to relevant content
+- Real-time notification listener (Appwrite Realtime)
+- Toast notification component (slides in, auto-dismiss, swipe on mobile)
+- Badge count management on nav icons
+
+---
+
+## 2.8 — VIEW: PROFILE (data-view="profile")
+
+**Build the COMPLETE Profile view including:**
+- Cover video/image hero (auto-loop, cinematic)
+- Avatar, name, headline, location, experience, availability, union badges
+- Stats: vouches, connections, profile views, impressions
+- Tab navigation: The Stage, Credits, About, Vouches
+- Video/photo portfolio grid
+- Verified Credits timeline (with peer verification flow)
+- About section (bio, skills, physical attributes, languages, training, social links)
+- Vouch breakdown by skill with bar graph
+- Edit Profile form (all fields)
+- Vouch Modal (select skill, write testimonial, submit)
+- Add Credit form (with verification request)
+- Other user's profile (Connect, Vouch, Message buttons)
+
+---
+
+## 2.9 — VIEW: SEARCH & FIND TALENT (data-view="search")
+
+**Build the COMPLETE Search view including:**
+- Full-screen overlay on mobile, main content on desktop
+- Category tabs: People, Jobs, Posts, Studios, Hashtags
+- Advanced filters: Role, City, State, Experience, Availability, Gender, Age Range, Language, Union, Min Vouches, Verified Only
+- Talent result cards with cover thumbnails
+- Debounced search (300ms)
+- vouchCount as relevance proxy
+
+---
+
+## 2.10 — VIEW: SETTINGS (data-view="settings")
+
+**Build the COMPLETE Settings view including:**
+- Desktop: side nav + content panel. Mobile: accordion sections
+- Account (phone, email, linked Google account)
+- Privacy (visibility, messaging, online status, block list)
+- Notifications (granular toggles for each type)
+- Job Preferences (roles, cities, min pay → saves to jobAlertPreferences collection)
+- Display (theme toggle, language, video autoplay)
+- Help & Support (FAQ, contact, terms)
+- Sign Out (destroy session → login screen)
+- Delete Account (confirmation modal)
+
+---
+
+# ═══════════════════════════════════════════════════════
+# PART 3: DATABASE SCHEMA (All 17 Collections)
+# ═══════════════════════════════════════════════════════
+
+Create ALL 17 collections with COMPLETE attribute schemas. Here is every collection:
+
+**Collections:** creators, studios, posts, comments, applauds, connections, vouches, credits, jobs, applications, conversations, messages, contracts, notifications, weeklyPrompts, savedItems, jobAlertPreferences
+
+Use the EXACT schemas defined in the original master prompt (collection name, every attribute with type/size/required/default, and all indexes). The init script must provision every single one.
+
+**Storage:** Single `avatars` bucket — handles ALL file types (images, videos, documents). Max 100MB/file. All authenticated users can create and read.
+
+---
+
+# ═══════════════════════════════════════════════════════
+# PART 4: MOBILE-FIRST RESPONSIVE + POLISH
+# ═══════════════════════════════════════════════════════
+
+## Breakpoints (mobile-first):
+```css
+/* Base = mobile 375px */
+@media (min-width: 768px) { /* Tablet */ }
+@media (min-width: 1024px) { /* Desktop: 3-column layout, hide bottom nav */ }
+@media (min-width: 1440px) { /* Large desktop */ }
+```
+
+## Mobile Rules:
+1. Bottom nav (56px fixed) with elevated center FAB
+2. Top bar: logo + search/chat/notification icons only
+3. All modals → full-screen bottom sheets on mobile
+4. Filter pills → horizontal scroll with snap
+5. Kanban → horizontal scroll (no drag-drop, use dropdown)
+6. Chat → full-screen with back arrow
+7. Settings → accordion style
+8. 44px minimum tap targets
+9. Safe area insets (env(safe-area-inset-*))
+10. No horizontal overflow anywhere
+11. Pull-to-refresh on feeds
+12. font-size: 16px on inputs (prevents iOS zoom)
+
+## Skeleton Loaders:
+Shimmer animation on every view while data loads (posts, jobs, talent cards, notifications, conversations).
+
+## Empty States:
+Every view has a meaningful empty state with illustration + message + CTA button.
+
+## Error Handling:
+- ALL Appwrite calls in try/catch
+- User-friendly toast messages (never raw errors)
+- Network error: "Couldn't load content. [Retry]"
+- No `alert()` — toast system only
+- No `console.log` in production
+
+## PWA:
+manifest.json + service worker + meta tags for installable web app.
+
+---
+
+# ═══════════════════════════════════════════════════════
+# PART 5: BUILD ORDER
+# ═══════════════════════════════════════════════════════
+
+Build EVERYTHING in this exact sequence:
+
+1. **Project structure + CSS design system + App shell (navbars + router)**
+2. **Appwrite client config + Init script (provisions all 17 collections + bucket)**
+3. **Auth: Phone OTP login + Google OAuth + OTP verification + Session management**
+4. **Onboarding wizard (4 steps) + Create creator profile**
+5. **Profile view (all tabs: Stage, Credits, About, Vouches) + Edit Profile**
+6. **The Stage: Video player + Post composer + Feed + Filters + Actions + Weekly Prompt**
+7. **Jobs: Listings + Post job + Apply + Kanban board + My Applications**
+8. **Network: Connections + Discover + People You May Know**
+9. **Vouches + Credits: Vouch modal + Verified credits timeline + Trending leaderboard**
+10. **Messaging: Conversations + Chat + Real-time + File sharing + Group chats**
+11. **Contracts + Escrow: Contract builder + Chat cards + Escrow widget + Negotiation**
+12. **Notifications: Real-time listener + Toasts + Badge counts + History view**
+13. **Search + Settings + Job Alerts**
+14. **Polish: Skeletons + Empty states + Error handling + PWA + Mobile QA + Performance**
+
+---
+
+# ═══════════════════════════════════════════════════════
+# CRITICAL RULES — MUST FOLLOW
+# ═══════════════════════════════════════════════════════
+
+1. **NO React, NO Vue, NO Angular** — pure vanilla JS with ES6 modules
+2. **ALL Appwrite IDs use constants** from appwriteClient.js — NEVER hardcode strings
+3. **Appwrite endpoint:** `https://fra.cloud.appwrite.io/v1`
+4. **Project ID:** `69c8ee1b0037e381d046`
+5. **Single storage bucket:** `avatars` for ALL uploads
+6. **Phone OTP:** Use `account.createPhoneToken()` + `account.createSession()`
+7. **Google OAuth:** Use `account.createOAuth2Session('google', successURL, failureURL, scopes)`
+8. **Mock phone numbers** for testing: +919876543210 (OTP: 123456)
+9. **Mobile-first** — base CSS for 375px, min-width media queries to scale up
+10. **44px minimum tap targets** on all interactive elements
+11. **Glassmorphism + Kalakar Gold** aesthetic — NOT generic Bootstrap
+12. **Every Appwrite call** wrapped in try/catch with user-friendly toast
+13. **No `alert()`** — use toast notification system
+14. **Realtime subscriptions** initialize AFTER authentication
+15. **Google OAuth success URL:** `window.location.origin + '/#stage'`
+16. **Google OAuth failure URL:** `window.location.origin + '/#login'`
+17. **Post-login routing:** Check if profile exists → if not, show onboarding → if yes, go to Stage
+
+---
+
+*Build the COMPLETE application. Every view, every component, every backend setup, every auth flow. Start with Part 1 (backend + auth), then Part 2 (all views), following the build order. The app must be fully functional with both Phone OTP and Google sign-in working end-to-end when complete.*

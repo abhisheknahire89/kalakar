@@ -1,5 +1,7 @@
+import { databases, Query, APPWRITE_CONFIG, ID, client, storage } from '../appwriteClient.js';
 import { StorageServiceInstance as StorageService, setView } from './core.js';
 import { openContractBuilder, initContractBuilder, renderDealMemoCard } from './contractBuilder.js';
+import { showToast } from './toast.js';
 
 const chatWindow = document.querySelector('#chat-window');
 const chatList = document.querySelector('#chat-list');
@@ -12,170 +14,293 @@ const chatUserAvatar = document.querySelector('#chat-user-avatar');
 const sendMsgBtn = document.querySelector('#send-msg-btn');
 const initiateContractBtn = document.querySelector('#initiate-contract-btn');
 
-let activeChatId = null;
+let activeConversationId = null;
+let activeRecipientId = null;
+let unsubscribeMessages = null;
 
 export function initChatModule() {
-  initContractBuilder((dealData) => {
-    // When a deal is built, inject it as a message
-    sendMessage(null, dealData);
+  initContractBuilder(async (dealData) => {
+    // When a deal is built, create a contract doc and send a special message
+    try {
+        const contract = await databases.createDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.contracts,
+            ID.unique(),
+            {
+                ...dealData,
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            }
+        );
+        sendMessage(null, 'contract', contract.$id);
+    } catch (error) {
+        showToast('Failed to create contract', 'danger');
+    }
   });
 
-  if (sendMsgBtn) {
-    sendMsgBtn.addEventListener('click', () => {
-      const text = chatInput.value.trim();
-      if (text) {
-        sendMessage(text);
-        chatInput.value = '';
-      }
-    });
-  }
+  sendMsgBtn?.addEventListener('click', () => {
+    const text = chatInput.value.trim();
+    if (text) {
+      sendMessage(text);
+      chatInput.value = '';
+    }
+  });
 
-  if (chatInput) {
-    chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        sendMsgBtn.click();
-      }
-    });
-  }
+  chatInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMsgBtn.click();
+  });
 
-  if (initiateContractBtn) {
-    initiateContractBtn.addEventListener('click', () => {
-      openContractBuilder();
-    });
-  }
+  initiateContractBtn?.addEventListener('click', () => {
+    openContractBuilder();
+  });
 }
 
-export function renderChatList() {
-  const creators = StorageService.get('kalakar_creators') || [];
-  const messages = StorageService.get(StorageService.KEYS.MESSAGES) || [];
-
+export async function renderChatList() {
   if (!chatList) return;
-  chatList.innerHTML = '';
+  const myProfile = StorageService.get('kalakar_user_profile');
+  if (!myProfile) return;
 
-  creators.forEach(creator => {
-    const userMsgs = messages.filter(m => m.chatId === creator.id);
-    const lastMsg = userMsgs[userMsgs.length - 1];
+  chatList.innerHTML = '<div class="skeleton-container"></div>';
+
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.collections.conversations,
+      [
+        Query.search('participantIds', myProfile.$id),
+        Query.orderDesc('updatedAt')
+      ]
+    );
+
+    chatList.innerHTML = '';
     
-    const item = document.createElement('div');
-    item.className = `chat-item ${activeChatId === creator.id ? 'active' : ''}`;
-    
-    item.innerHTML = `
-      <img src="https://i.pravatar.cc/150?u=${encodeURIComponent(creator.name)}" style="width: 48px; height: 48px; border-radius: 50%;">
-      <div class="chat-item-info">
-        <h4>${creator.name}</h4>
-        <p>${lastMsg ? (lastMsg.type === 'deal-memo' ? '📜 Deal Memo Sent' : lastMsg.text) : 'Tap to start deal...'}</p>
-      </div>
-      <div style="font-size: 0.7rem; color: var(--muted);">
-        ${lastMsg ? formatTime(lastMsg.timestamp) : ''}
-      </div>
-    `;
-    
-    item.addEventListener('click', () => openChat(creator.id));
-    chatList.appendChild(item);
-  });
-}
+    for (const conv of response.documents) {
+      const recipientId = conv.participantIds.find(id => id !== myProfile.$id);
+      const recipient = await databases.getDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.creators,
+        recipientId
+      );
 
-export function openChat(creatorId) {
-  activeChatId = creatorId;
-  const creators = StorageService.get('kalakar_creators') || [];
-  const creator = creators.find(c => c.id === creatorId);
+      const item = document.createElement('div');
+      item.className = `chat-item ${activeConversationId === conv.$id ? 'active' : ''}`;
+      
+      const avatar = recipient.avatarFileId ? 
+        storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, recipient.avatarFileId, 100).href : 
+        `https://i.pravatar.cc/100?u=${recipient.$id}`;
 
-  if (!creator) return;
-
-  chatUserName.textContent = creator.name;
-  chatUserAvatar.src = `https://i.pravatar.cc/150?u=${encodeURIComponent(creator.name)}`;
-  
-  chatHeader.classList.remove('hidden');
-  chatWindow.classList.remove('hidden');
-  chatInputArea.classList.remove('hidden');
-  chatEmptyState.classList.add('hidden');
-
-  renderMessages();
-  renderChatList();
-  setView('messages');
-}
-
-export function renderMessages() {
-  const messages = StorageService.get(StorageService.KEYS.MESSAGES) || [];
-  const currentUserId = StorageService.get(StorageService.KEYS.USER);
-  const chatMsgs = messages.filter(m => m.chatId === activeChatId);
-
-  chatWindow.innerHTML = '';
-  
-  if (chatMsgs.length === 0) {
-    chatWindow.innerHTML = `
-      <div class="empty-state text-center" style="margin-top: auto; padding: 20px;">
-        <p class="meta">This is the start of your professional dialogue with <strong>${chatUserName.textContent}</strong>.</p>
-        <p class="meta" style="font-size: 0.75rem;">Keep communications here to ensure protection under Kalakar's Escrow terms.</p>
-      </div>
-    `;
+      item.innerHTML = `
+        <img src="${avatar}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+        <div class="chat-item-info">
+          <h4>${recipient.name}</h4>
+          <p>${conv.lastMessage || 'Start a conversation...'}</p>
+        </div>
+        <div style="font-size: 0.7rem; color: var(--muted);">
+          ${formatTime(conv.updatedAt)}
+        </div>
+      `;
+      
+      item.onclick = () => openChat(recipientId);
+      chatList.appendChild(item);
+    }
+  } catch (error) {
+    console.error('Chat list error:', error);
   }
+}
 
-  chatMsgs.forEach(m => {
-    const div = document.createElement('div');
-    div.className = `chat-message ${m.senderId === currentUserId ? 'sent' : 'received'}`;
-    
-    if (m.type === 'deal-memo') {
-      div.innerHTML = renderDealMemoCard(m.data);
-      div.style.background = 'transparent'; // Card handles its own styling
-      div.style.padding = '0';
-      div.style.maxWidth = '100%';
+export async function openChat(recipientId) {
+  const myProfile = StorageService.get('kalakar_user_profile');
+  if (!myProfile) return;
+
+  activeRecipientId = recipientId;
+  
+  try {
+    const recipient = await databases.getDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.creators,
+        recipientId
+    );
+
+    chatUserName.textContent = recipient.name;
+    const avatar = recipient.avatarFileId ? 
+        storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, recipient.avatarFileId, 100).href : 
+        `https://i.pravatar.cc/100?u=${recipient.$id}`;
+    chatUserAvatar.src = avatar;
+
+    // 1. Find or Create Conversation
+    const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.conversations,
+        [
+            Query.search('participantIds', myProfile.$id),
+            Query.search('participantIds', recipientId)
+        ]
+    );
+
+    if (response.documents.length > 0) {
+        activeConversationId = response.documents[0].$id;
     } else {
-      div.textContent = m.text;
+        const newConv = await databases.createDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.conversations,
+            ID.unique(),
+            {
+                participantIds: [myProfile.$id, recipientId],
+                lastMessage: '',
+                updatedAt: new Date().toISOString()
+            }
+        );
+        activeConversationId = newConv.$id;
     }
-    
-    chatWindow.appendChild(div);
-  });
 
-  // Re-bind deal buttons
-  document.querySelectorAll('.accept-deal-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => handleDealStatus(e.target.dataset.id, 'signed'));
-  });
+    chatHeader.classList.remove('hidden');
+    chatWindow.classList.remove('hidden');
+    chatInputArea.classList.remove('hidden');
+    chatEmptyState.classList.add('hidden');
 
-  chatWindow.scrollTop = chatWindow.scrollHeight;
-}
-
-function sendMessage(text, dealData = null) {
-  if (!activeChatId) return;
-
-  const messages = StorageService.get(StorageService.KEYS.MESSAGES) || [];
-  const newMessage = {
-    id: 'msg_' + Date.now(),
-    chatId: activeChatId,
-    senderId: StorageService.get(StorageService.KEYS.USER),
-    timestamp: Date.now(),
-    text: text,
-    type: dealData ? 'deal-memo' : 'text',
-    data: dealData
-  };
-
-  messages.push(newMessage);
-  StorageService.set(StorageService.KEYS.MESSAGES, messages);
-  
-  renderMessages();
-  renderChatList();
-}
-
-function handleDealStatus(dealId, newStatus) {
-  const messages = StorageService.get(StorageService.KEYS.MESSAGES) || [];
-  const msg = messages.find(m => m.data && m.data.id === dealId);
-  if (msg) {
-    msg.data.status = newStatus;
-    StorageService.set(StorageService.KEYS.MESSAGES, messages);
     renderMessages();
-    
-    if (newStatus === 'signed' && window.showToast) {
-      window.showToast('Deal Signed & Escrow Initialized!', 'success');
-    }
+    setupRealtime();
+    renderChatList();
+    setView('messages');
+
+  } catch (error) {
+    console.error('Open chat error:', error);
   }
 }
 
-function formatTime(ts) {
-  const date = new Date(ts);
+async function renderMessages() {
+  if (!activeConversationId) return;
+  chatWindow.innerHTML = '<div class="skeleton-container"></div>';
+
+  try {
+    const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.messages,
+        [
+            Query.equal('conversationId', activeConversationId),
+            Query.orderAsc('createdAt'),
+            Query.limit(50)
+        ]
+    );
+
+    chatWindow.innerHTML = '';
+    const myProfile = StorageService.get('kalakar_user_profile');
+
+    for (const msg of response.documents) {
+        appendMessage(msg, myProfile.$id);
+    }
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  } catch (error) {
+    console.error('Messages error:', error);
+  }
+}
+
+function appendMessage(msg, myId) {
+    const div = document.createElement('div');
+    div.className = `chat-message ${msg.senderId === myId ? 'sent' : 'received'}`;
+    
+    if (msg.type === 'contract' && msg.contractId) {
+        // Fetch contract and render card
+        div.innerHTML = '<div class="skeleton" style="height:200px; width:300px;"></div>';
+        div.style.background = 'transparent';
+        div.style.padding = '0';
+        fetchAndRenderContract(msg.contractId, div);
+    } else {
+        div.textContent = msg.text;
+    }
+    chatWindow.appendChild(div);
+}
+
+async function fetchAndRenderContract(contractId, container) {
+    try {
+        const contract = await databases.getDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.contracts,
+            contractId
+        );
+        container.innerHTML = renderDealMemoCard(contract);
+        // Re-bind accept buttons
+        container.querySelectorAll('.accept-deal-btn').forEach(btn => {
+            btn.onclick = () => handleDealStatus(contractId, 'signed');
+        });
+    } catch (error) {
+        container.innerHTML = '<p class="meta">Contract unavailable.</p>';
+    }
+}
+
+async function sendMessage(text, type = 'text', contractId = null) {
+  if (!activeConversationId) return;
+  const myProfile = StorageService.get('kalakar_user_profile');
+
+  try {
+    const msg = await databases.createDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.messages,
+        ID.unique(),
+        {
+            conversationId: activeConversationId,
+            senderId: myProfile.$id,
+            text: text || (type === 'contract' ? '📜 New Deal Memo' : ''),
+            type: type,
+            contractId: contractId,
+            createdAt: new Date().toISOString()
+        }
+    );
+
+    // Update conversation meta
+    await databases.updateDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.conversations,
+        activeConversationId,
+        {
+            lastMessage: text || '📜 Deal Memo',
+            updatedAt: new Date().toISOString()
+        }
+    );
+
+    // appendMessage(msg, myProfile.$id); // Real-time will handle this if active
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  } catch (error) {
+    console.error('Send message error:', error);
+  }
+}
+
+function setupRealtime() {
+    if (unsubscribeMessages) unsubscribeMessages();
+
+    unsubscribeMessages = client.subscribe(
+        `databases.${APPWRITE_CONFIG.databaseId}.collections.${APPWRITE_CONFIG.collections.messages}.documents`,
+        (response) => {
+            const myProfile = StorageService.get('kalakar_user_profile');
+            const msg = response.payload;
+
+            if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+                if (msg.conversationId === activeConversationId) {
+                    appendMessage(msg, myProfile.$id);
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                }
+                renderChatList(); // Refresh sidebar for last message
+            }
+        }
+    );
+}
+
+async function handleDealStatus(contractId, newStatus) {
+    try {
+        await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.contracts,
+            contractId,
+            { status: newStatus }
+        );
+        showToast('Deal status updated!', 'success');
+        renderMessages();
+    } catch (error) {
+        showToast('Update failed', 'danger');
+    }
+}
+
+function formatTime(isoStr) {
+  const date = new Date(isoStr);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
-
-// Global initialization hook
-document.addEventListener('DOMContentLoaded', () => {
-    initChatModule();
-});

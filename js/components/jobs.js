@@ -1,6 +1,7 @@
-import { StorageServiceInstance as StorageService, setView } from './core.js';
-import { openChat } from './chat.js';
+import { databases, Query, APPWRITE_CONFIG, ID } from '../appwriteClient.js';
+import { StorageServiceInstance as StorageService } from './core.js';
 import { createKanbanBoard } from './kanban.js';
+import { showToast } from './toast.js';
 
 const recentJobsFeed = document.querySelector('#recent-jobs-feed');
 const featuredJobsCarousel = document.querySelector('#featured-jobs-carousel-content');
@@ -10,167 +11,210 @@ const postJobModal = document.querySelector('#post-job-modal');
 const postJobForm = document.querySelector('#post-job-form');
 const currentJobTitleSpan = document.querySelector('#current-job-title');
 
-// Phase 32: Jobs Data Hooking
-export async function fetchJobsFromDB() {
+export async function renderJobs(filter = 'all') {
+  const userProfile = StorageService.get('kalakar_user_profile');
+  if (!userProfile) return;
+
+  if (recentJobsFeed) recentJobsFeed.innerHTML = '<div class="skeleton-container"></div>';
+  if (featuredJobsCarousel) featuredJobsCarousel.innerHTML = '';
+  if (applicantsSection) applicantsSection.classList.add('hidden');
+
   try {
-    const { data: jobs, error } = await window.supabaseClient.from('jobs').select('*');
-    if (error) throw error;
-    return jobs || [];
-  } catch (err) {
-    console.warn("Supabase fetch failed, falling back to mock UI...", err);
-    return StorageService.get(StorageService.KEYS.JOBS) || [];
+    const queries = [Query.limit(20), Query.orderDesc('createdAt')];
+
+    // Filter Logic
+    if (filter === 'Acting' || filter === 'Crew') {
+        queries.push(Query.equal('roleType', filter));
+    } else if (filter === 'my') {
+        queries.push(Query.equal('posterId', userProfile.$id));
+    }
+
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.collections.jobs,
+      queries
+    );
+
+    const allJobs = response.documents;
+
+    if (recentJobsFeed) recentJobsFeed.innerHTML = '';
+
+    if (allJobs.length === 0) {
+        if (recentJobsFeed) recentJobsFeed.innerHTML = '<p class="text-center meta mt-4">No hiring calls found at the moment.</p>';
+        return;
+    }
+
+    // Featured (Urgent) Jobs
+    allJobs.filter(j => j.isUrgent).forEach(job => {
+      const card = createJobCard(job, true);
+      if (featuredJobsCarousel) featuredJobsCarousel.appendChild(card);
+    });
+
+    // Main Feed
+    allJobs.forEach(job => {
+      const card = createJobCard(job, false);
+      if (recentJobsFeed) recentJobsFeed.appendChild(card);
+    });
+
+    // Events
+    document.querySelectorAll('.view-applicants-btn').forEach(btn => {
+      btn.onclick = () => viewApplicants(btn.dataset.id);
+    });
+
+    document.querySelectorAll('.apply-job-btn').forEach(btn => {
+      btn.onclick = () => handleApply(btn.dataset.id);
+    });
+
+  } catch (error) {
+    console.error('Jobs error:', error);
+    if (recentJobsFeed) recentJobsFeed.innerHTML = '<p class="text-center meta">Failed to load casting calls.</p>';
   }
 }
 
-export async function renderJobs(filter = 'all') {
+function createJobCard(job, isFeatured) {
+  const card = document.createElement('div');
+  card.className = isFeatured ? 'job-card' : 'job-card feed-item';
+  
+  const created = new Date(job.createdAt);
+  const timeAgo = Math.floor((Date.now() - created) / 3600000);
+  const displayTime = timeAgo > 24 ? `${Math.floor(timeAgo/24)}d` : `${timeAgo}h`;
 
-  const allJobs = await fetchJobsFromDB();
-
-  const filteredJobs = filter === 'all'
-    ? allJobs
-    : allJobs.filter(j => j.roleType && j.roleType.toLowerCase() === filter.toLowerCase());
-
-  if (recentJobsFeed) recentJobsFeed.innerHTML = '';
-  if (featuredJobsCarousel) featuredJobsCarousel.innerHTML = '';
-
-  if (applicantsSection) applicantsSection.classList.add('hidden');
-
-  const urgentJobs = filteredJobs.filter(j => j.urgent).sort((a, b) => b.createdAt - a.createdAt);
-  const normalJobs = filteredJobs.filter(j => !j.urgent).sort((a, b) => b.createdAt - a.createdAt);
-
-  urgentJobs.forEach(job => {
-    const card = document.createElement('div');
-    card.className = 'job-card';
-    card.innerHTML = `
-      <div class="job-card__header">
-        <div>
-          <h3 class="job-card__title">${job.title}</h3>
-          <p class="job-card__prod">${job.company} ${job.verified ? '<span style="color:var(--brand-gold);">✓</span>' : ''}</p>
-        </div>
+  card.innerHTML = `
+    <div class="job-card__header">
+      <div>
+        <h3 class="job-card__title">${job.title}</h3>
+        <p class="job-card__prod">${job.company} ${job.isVerified ? '<span style="color:var(--brand-gold);">✓</span>' : ''}</p>
       </div>
-      <div class="job-meta">
-        <span class="job-meta__tag">${job.type}</span>
-        <span class="job-meta__tag">${job.location}</span>
-        <span class="job-meta__tag" style="color: var(--success); border-color: var(--success);">Urgent</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; margin-top: 12px; align-items:center;">
-        <button class="ghost small view-applicants-btn" data-id="${job.id}" style="padding: 4px 12px; border-radius: 20px;">Applicants</button>
-        <button class="job-card__btn open-chat-btn" data-target="negotiation-workspace" style="margin-top:0;">💸 Deal</button>
-      </div>
-    `;
-    if (featuredJobsCarousel) featuredJobsCarousel.appendChild(card);
-  });
+      ${!isFeatured ? `<div style="font-size: 0.75rem; color: var(--muted);">${displayTime} ago</div>` : ''}
+    </div>
+    <div class="job-meta">
+      <span class="job-meta__tag">${job.type}</span>
+      <span class="job-meta__tag">${job.location}</span>
+      ${job.isUrgent ? '<span class="job-meta__tag" style="color:var(--brand-gold); border-color:var(--brand-gold);">Urgent</span>' : ''}
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top: 16px; align-items:center;">
+      <button class="ghost small view-applicants-btn" data-id="${job.$id}">Applicants</button>
+      <button class="job-card__btn apply-job-btn" data-id="${job.$id}" style="margin:0; padding: 6px 16px;">Easy Apply</button>
+    </div>
+  `;
+  return card;
+}
 
-  filteredJobs.sort((a, b) => b.createdAt - a.createdAt).forEach(job => {
-    const card = document.createElement('div');
-    card.className = 'job-card feed-item';
-    card.innerHTML = `
-      <div class="job-card__header">
-        <div>
-          <h3 class="job-card__title">${job.title}</h3>
-          <p class="job-card__prod">${job.company} ${job.verified ? '<span style="color:var(--brand-gold);">✓</span>' : ''}</p>
-        </div>
-        <div style="font-size: 0.75rem; color: var(--muted);">${Math.floor((Date.now() - job.createdAt) / 3600000)}h ago</div>
-      </div>
-      <div class="job-meta">
-        <span class="job-meta__tag">${job.type}</span>
-        <span class="job-meta__tag">${job.location}</span>
-        ${job.tags.map(t => `<span class="job-meta__tag">${t}</span>`).join('')}
-      </div>
-      <div style="display:flex; justify-content:space-between; margin-top: 12px; align-items:center;">
-        <button class="ghost small view-applicants-btn" data-id="${job.id}" style="padding: 4px 12px; border-radius: 20px;">View Applicants</button>
-        <button class="job-card__btn open-chat-btn" data-target="negotiation-workspace" style="margin-top:0;">💸 Initiate Deal</button>
-      </div>
-    `;
-    if (recentJobsFeed) recentJobsFeed.appendChild(card);
-  });
+export async function viewApplicants(jobId) {
+  try {
+    const job = await databases.getDocument(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.collections.jobs,
+      jobId
+    );
 
-  document.querySelectorAll('.view-applicants-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      viewApplicants(e.target.dataset.id);
+    const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.applications,
+        [Query.equal('jobId', jobId)]
+    );
+
+    currentJobTitleSpan.textContent = job.title;
+    
+    // UI Toggles
+    recentJobsFeed.closest('#jobs-view').querySelectorAll('.view-header, h3, #featured-jobs-carousel-content, #recent-jobs-feed').forEach(el => {
+        el.classList.add('hidden');
     });
-  });
-}
-
-export function viewApplicants(jobId) {
-  const allJobs = StorageService.get(StorageService.KEYS.JOBS) || [];
-  const job = allJobs.find(j => j.id === jobId);
-  const apps = StorageService.get(StorageService.KEYS.APPLICATIONS) || [];
-  const jobApps = apps.filter(a => a.jobId === jobId);
-
-  currentJobTitleSpan.textContent = job.title;
-  document.querySelector('.view-header').classList.add('hidden'); // hide main jobs header
-  recentJobsFeed.closest('#jobs-view').querySelector('h3').classList.add('hidden');
-  recentJobsFeed.closest('#jobs-view').querySelectorAll('h3')[1].classList.add('hidden');
-  recentJobsFeed.classList.add('hidden');
-  featuredJobsCarousel.classList.add('hidden');
-  
-  applicantsSection.classList.remove('hidden');
-  
-  // Prompt 2: Kanban Board injection
-  const { renderApplications } = createKanbanBoard(applicantsList, {
-    jobId: jobId,
-    onStatusChange: (applicationId, newStatus) => {
-      const apps = StorageService.get(StorageService.KEYS.APPLICATIONS);
-      const index = apps.findIndex(a => a.id === applicationId);
-      if (index !== -1) {
-        apps[index].status = newStatus;
-        StorageService.set(StorageService.KEYS.APPLICATIONS, apps);
-        
-        // Notification logic (Prompt 6 framework)
-        showToast(`Application moved to ${newStatus.toUpperCase()}`, 'success');
+    applicantsSection.classList.remove('hidden');
+    
+    const { renderApplications } = createKanbanBoard(applicantsList, {
+      jobId: jobId,
+      onStatusChange: async (applicationId, newStatus) => {
+        try {
+            await databases.updateDocument(
+                APPWRITE_CONFIG.databaseId,
+                APPWRITE_CONFIG.collections.applications,
+                applicationId,
+                { status: newStatus }
+            );
+            showToast(`Status updated to ${newStatus}`, 'success');
+        } catch (error) {
+            showToast('Failed to update status', 'danger');
+        }
       }
-    }
-  });
+    });
 
-  renderApplications(jobApps);
+    renderApplications(response.documents);
+
+  } catch (error) {
+    console.error('Applicants error:', error);
+    showToast('Failed to load applicants', 'danger');
+  }
 }
 
-function showToast(msg, type) {
-    if(window.showToast) window.showToast(msg, type); // Global fallback
-    else alert(msg);
+async function handleApply(jobId) {
+    const profile = StorageService.get('kalakar_user_profile');
+    try {
+        await databases.createDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.applications,
+            ID.unique(),
+            {
+                jobId: jobId,
+                talentId: profile.$id,
+                status: 'pending',
+                appliedAt: new Date().toISOString()
+            }
+        );
+        showToast('Application submitted!', 'success');
+    } catch (error) {
+        showToast('Already applied or error', 'info');
+    }
 }
 
 // Modal Logic
 document.querySelector('#post-job-trigger')?.addEventListener('click', () => {
-  postJobModal.classList.remove('hidden');
+    postJobModal.classList.remove('hidden');
 });
 
-document.querySelectorAll('.close-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    postJobModal.classList.add('hidden');
-  });
-});
+postJobForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const profile = StorageService.get('kalakar_user_profile');
+    
+    try {
+        await databases.createDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.jobs,
+            ID.unique(),
+            {
+                title: document.querySelector('#job-title').value,
+                company: profile.name, // or a company field
+                type: document.querySelector('#job-type').value,
+                location: document.querySelector('#job-location').value,
+                description: document.querySelector('#job-desc').value,
+                posterId: profile.$id,
+                isUrgent: false,
+                isVerified: true,
+                createdAt: new Date().toISOString()
+            }
+        );
 
-postJobForm?.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const newJob = {
-    id: 'j' + Date.now(),
-    title: document.querySelector('#job-title').value,
-    type: document.querySelector('#job-type').value,
-    location: document.querySelector('#job-location').value,
-    desc: document.querySelector('#job-desc').value,
-    posterId: StorageService.get(StorageService.KEYS.USER),
-    createdAt: Date.now()
-  };
-
-  const jobs = StorageService.get(StorageService.KEYS.JOBS);
-  jobs.push(newJob);
-  StorageService.set(StorageService.KEYS.JOBS, jobs);
-
-  postJobModal.classList.add('hidden');
-  postJobForm.reset();
-  renderJobs('my');
+        postJobModal.classList.add('hidden');
+        postJobForm.reset();
+        showToast('Hiring call live!', 'success');
+        renderJobs('my');
+    } catch (error) {
+        showToast('Failed to post job', 'danger');
+    }
 });
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.onclick = () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     renderJobs(btn.dataset.tab);
-  });
+  };
 });
 
 document.querySelector('.back-link')?.addEventListener('click', () => {
-  renderJobs('all');
+    recentJobsFeed.closest('#jobs-view').querySelectorAll('.view-header, h3, #featured-jobs-carousel-content, #recent-jobs-feed').forEach(el => {
+        el.classList.remove('hidden');
+    });
+    applicantsSection.classList.add('hidden');
+    renderJobs('all');
 });

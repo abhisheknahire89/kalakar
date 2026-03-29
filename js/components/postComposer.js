@@ -1,277 +1,191 @@
+import { databases, storage, ID, APPWRITE_CONFIG } from '../appwriteClient.js';
 import { renderStage } from './feed.js';
+import { StorageServiceInstance as StorageService } from './core.js';
+import { showToast } from './toast.js';
+
+let selectedFile = null;
 
 export function initPostComposer() {
+  const existing = document.getElementById('post-composer-modal');
+  if (existing) existing.remove();
+
+  const userProfile = StorageService.get('kalakar_user_profile');
+  if (!userProfile) return;
+
   const composerContainer = document.createElement('div');
   composerContainer.id = 'post-composer-modal';
   composerContainer.className = 'modal-overlay hidden';
+  
+  const avatarUrl = userProfile.avatarFileId ? 
+    storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, userProfile.avatarFileId, 100).href : 
+    `https://i.pravatar.cc/100?u=${userProfile.$id}`;
+
   composerContainer.innerHTML = `
-    <div class="modal-content panel profile-large" style="max-width: 560px; padding: 20px; text-align: left; background: var(--bg-primary);">
-      <header class="modal-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="font-size: 1.5rem; margin: 0;">Create Post</h2>
-        <button class="close-btn" id="close-composer-btn" style="background:none; border:none; font-size: 1.5rem; color: var(--text); cursor:pointer;">&times;</button>
+    <div class="modal-content panel profile-large" style="max-width: 500px; padding: 24px;">
+      <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 1.4rem;">Share your craft</h2>
+        <button id="close-composer-btn" class="ghost small" style="font-size: 1.5rem;">&times;</button>
       </header>
 
-      <div class="modal-author-row" style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-        <img src="https://i.pravatar.cc/150?img=11" alt="Profile" class="user-avatar" style="width: 48px; height: 48px; border-radius: 50%;">
-        <div class="author-info">
-          <h3 class="author-name" style="font-size: 1.05rem; margin:0;">Ishaan Verma</h3>
-          <select class="subtle-select" style="font-size: 0.85rem; padding: 2px 4px; margin-top: 4px; background: var(--bg-elevated); border: 1px solid var(--line); color: var(--text);">
-            <option>🌍 Anyone</option>
-            <option>Connections Only</option>
-          </select>
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+        <img src="${avatarUrl}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;">
+        <div>
+          <div style="font-weight: 700;">${userProfile.name}</div>
+          <div class="meta" style="font-size: 0.8rem;">Posting to The Stage</div>
         </div>
       </div>
 
-      <div class="composer-input-area" style="position: relative;">
-        <!-- Backdrop for highlighting -->
-        <div class="composer-highlights" style="position: absolute; top: 0; left: 0; width: 100%; height: 100px; padding: 12px; font-family: inherit; font-size: 1rem; color: transparent; pointer-events: none; white-space: pre-wrap; word-wrap: break-word;"></div>
-        <textarea id="composer-caption" style="width: 100%; height: 100px; background: transparent; color: var(--text); border: none; resize: none; font-size: 1rem; padding: 12px; font-family: inherit;" placeholder="What do you want to showcase?"></textarea>
-      </div>
+      <textarea id="composer-caption" placeholder="What are you working on? #Acting #DOP #Mumbai" style="width: 100%; height: 120px; background: transparent; border: none; color: var(--text); resize: none; font-size: 1.1rem; padding: 0; outline: none; margin-bottom: 16px;"></textarea>
 
-      <div class="composer-media-zone" id="composer-drop-zone" style="border: 2px dashed var(--line); border-radius: 12px; padding: 32px; text-align: center; margin: 16px 0; cursor: pointer; transition: border-color 0.2s;">
-        <span style="font-size: 2rem; display: block; margin-bottom: 8px;">📹</span>
-        <p style="margin:0; color: var(--muted);">Click or drag video to upload</p>
+      <div id="composer-drop-zone" style="border: 2px dashed var(--line); border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; position: relative;">
+        <div id="drop-zone-content">
+          <span style="font-size: 2rem;">📹</span>
+          <p class="meta mt-2">Upload Video or Photo</p>
+          <p class="meta" style="font-size: 0.75rem;">Max 100MB · MP4/MOV/JPG</p>
+        </div>
+        <video id="composer-preview-video" class="hidden" style="width: 100%; border-radius: 12px;" controls playsinline></video>
+        <img id="composer-preview-img" class="hidden" style="width: 100%; border-radius: 12px;">
         <input type="file" id="composer-file-input" hidden accept="video/*,image/*">
-        <video id="composer-preview" class="hidden" style="width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 12px;" controls playsinline></video>
       </div>
 
-      <div id="composer-uploading-state" class="hidden" style="text-align: center; margin-bottom: 16px;">
-        <p class="meta" style="margin-bottom: 8px;">Uploading... <span id="composer-upload-progress">0%</span></p>
-        <div style="width: 100%; height: 4px; background: var(--bg-hover); border-radius: 2px; overflow: hidden;">
-          <div id="composer-progress-bar" style="width: 0%; height: 100%; background: var(--brand-gold); transition: width 0.2s;"></div>
+      <div id="composer-upload-status" class="hidden mt-4">
+        <div class="meta mb-1">Uploading... <span id="upload-pct">0%</span></div>
+        <div style="width: 100%; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden;">
+          <div id="upload-progress-bar" style="width: 0%; height: 100%; background: var(--brand-gold); transition: width 0.3s;"></div>
         </div>
       </div>
 
-      <div class="composer-options" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
-        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px;">
-          <span>📍</span>
-          <input type="text" id="composer-location" placeholder="Add location" style="flex:1; background:transparent; border:none; color:var(--text); outline:none; font-size: 0.9rem;">
-        </div>
-        
-        <label class="prompt-toggle" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.9rem; color: var(--brand-gold); cursor: pointer;">
-          <input type="checkbox" id="composer-link-prompt" style="accent-color: var(--brand-gold);">
-          Link to Weekly Prompt: "The Final Negotiation"
+      <div style="margin-top: 24px; display: flex; align-items: center; gap: 12px;">
+        <label style="display: flex; align-items: center; gap: 8px; color: var(--brand-gold); cursor: pointer; font-size: 0.9rem;">
+          <input type="checkbox" id="composer-link-prompt" style="accent-color: var(--brand-gold);"> Link to Weekly Prompt
         </label>
       </div>
 
-      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 16px;">
-        <div class="media-type-row" style="display: flex; gap: 8px;">
-          <button class="icon-btn" onclick="document.getElementById('composer-file-input').click()" style="color:var(--text); background:var(--bg-elevated); padding:8px 12px; border-radius:20px; font-size:0.85rem;"><span class="icon">📹</span> Video</button>
-          <button class="icon-btn" onclick="document.getElementById('composer-file-input').click()" style="color:var(--text); background:var(--bg-elevated); padding:8px 12px; border-radius:20px; font-size:0.85rem;"><span class="icon">📷</span> Photo</button>
-        </div>
-        <button class="primary action-gold" id="composer-post-btn" style="padding: 10px 24px; border-radius: 20px; font-weight: 600;" disabled>Post</button>
-      </div>
+      <button id="composer-post-btn" class="primary full-width mt-4" style="padding: 14px; font-weight: 700; background: var(--brand-gold); color: black;" disabled>Post to Stage ✦</button>
     </div>
   `;
 
   document.body.appendChild(composerContainer);
 
   const modal = document.getElementById('post-composer-modal');
-  const closeBtn = document.getElementById('close-composer-btn');
   const fileInput = document.getElementById('composer-file-input');
   const dropZone = document.getElementById('composer-drop-zone');
-  const preview = document.getElementById('composer-preview');
   const postBtn = document.getElementById('composer-post-btn');
-  const captionInput = document.getElementById('composer-caption');
-  const highlights = document.querySelector('.composer-highlights');
-  
-  let selectedFile = null;
+  const caption = document.getElementById('composer-caption');
 
-  closeBtn.addEventListener('click', () => {
-    modal.classList.add('hidden');
-    resetComposer();
-  });
+  document.getElementById('close-composer-btn').onclick = () => {
+      modal.classList.add('hidden');
+      reset();
+  };
 
-  const checkValidation = () => {
-    if (selectedFile || captionInput.value.trim().length > 0) {
-      postBtn.disabled = false;
+  dropZone.onclick = (e) => {
+    if (e.target.id !== 'composer-preview-video') fileInput.click();
+  };
+
+  fileInput.onchange = (e) => {
+    selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+    
+    document.getElementById('drop-zone-content').classList.add('hidden');
+    if (selectedFile.type.startsWith('video/')) {
+        const url = URL.createObjectURL(selectedFile);
+        const video = document.getElementById('composer-preview-video');
+        video.src = url;
+        video.classList.remove('hidden');
     } else {
-      postBtn.disabled = true;
+        const url = URL.createObjectURL(selectedFile);
+        const img = document.getElementById('composer-preview-img');
+        img.src = url;
+        img.classList.remove('hidden');
+    }
+    postBtn.disabled = false;
+  };
+
+  caption.oninput = () => {
+      if (caption.value.trim().length > 0 || selectedFile) postBtn.disabled = false;
+      else postBtn.disabled = true;
+  };
+
+  postBtn.onclick = async () => {
+    if (caption.value.trim().length === 0 && !selectedFile) return;
+    
+    postBtn.disabled = true;
+    postBtn.textContent = 'Preparing...';
+    
+    const status = document.getElementById('composer-upload-status');
+    const progress = document.getElementById('upload-progress-bar');
+    const pct = document.getElementById('upload-pct');
+    status.classList.remove('hidden');
+
+    try {
+      let fileId = null;
+      let thumbId = null;
+
+      if (selectedFile) {
+        pct.textContent = '30%';
+        progress.style.width = '30%';
+        
+        const result = await storage.createFile(APPWRITE_CONFIG.buckets.avatars, ID.unique(), selectedFile);
+        fileId = result.$id;
+
+        pct.textContent = '70%';
+        progress.style.width = '70%';
+      }
+
+      await databases.createDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.posts,
+        ID.unique(),
+        {
+          authorId: userProfile.$id, // Uses the $id of the profile doc
+          contentText: caption.value,
+          videoFileId: fileId,
+          category: userProfile.primaryCraft.toLowerCase(),
+          applaudCount: 0,
+          commentCount: 0,
+          isPromptLinked: document.getElementById('composer-link-prompt').checked,
+          createdAt: new Date().toISOString()
+        }
+      );
+
+      pct.textContent = '100%';
+      progress.style.width = '100%';
+      showToast('Cast successfully!', 'success');
+      
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        reset();
+        renderStage(); // Refresh feed
+      }, 500);
+
+    } catch (error) {
+      console.error('Casting failed:', error);
+      showToast('Casting failed. Try again.', 'danger');
+      postBtn.disabled = false;
+      postBtn.textContent = 'Post to Stage ✦';
     }
   };
 
-  captionInput.addEventListener('input', () => {
-    // Basic hashtag highlighting
-    const text = captionInput.value;
-    const highlightedText = text.replace(/(#[a-zA-Z0-9]+)/g, '<span style="color: var(--brand-gold);">$1</span>');
-    highlights.innerHTML = highlightedText + ' '; // Added space for syncing scroll width if needed
-    checkValidation();
-  });
-
-  captionInput.addEventListener('scroll', () => {
-    highlights.scrollTop = captionInput.scrollTop;
-  });
-
-  dropZone.addEventListener('click', (e) => {
-    if (e.target !== fileInput && e.target !== preview) {
-      fileInput.click();
-    }
-  });
-
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--brand-gold)';
-  });
-
-  dropZone.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--line)';
-  });
-
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--line)';
-    if (e.dataTransfer.files.length) {
-      handleFileSelect(e.dataTransfer.files[0]);
-    }
-  });
-
-  fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length) {
-      handleFileSelect(e.target.files[0]);
-    }
-  });
-
-  function handleFileSelect(file) {
-    selectedFile = file;
-    checkValidation();
-    if (file.type.startsWith('video/')) {
-      const url = URL.createObjectURL(file);
-      preview.src = url;
-      preview.classList.remove('hidden');
-      dropZone.querySelector('p').classList.add('hidden');
-      dropZone.querySelector('span').classList.add('hidden');
-    }
-  }
-
-  function generateThumbnail(videoElement) {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = videoElement.videoWidth;
-      canvas.height = videoElement.videoHeight;
-      const ctx = canvas.getContext('2d');
-      // Draw frame to canvas
-      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        resolve(new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' }));
-      }, 'image/jpeg', 0.85);
-    });
-  }
-
-  postBtn.addEventListener('click', async () => {
-    if (!selectedFile && !captionInput.value.trim()) return;
-
-    postBtn.disabled = true;
-    const uploadingState = document.getElementById('composer-uploading-state');
-    const uploadProgress = document.getElementById('composer-upload-progress');
-    const progressBar = document.getElementById('composer-progress-bar');
-    uploadingState.classList.remove('hidden');
-
-    try {
-      let mediaFileId = null;
-      let thumbnailFileId = null;
-
-      if (selectedFile) {
-        uploadProgress.textContent = '10%';
-        progressBar.style.width = '10%';
-        
-        let thumbBlob = null;
-        if (selectedFile.type.startsWith('video/')) {
-           // wait for a frame to load to draw the thumbnail
-           preview.currentTime = 1.0; 
-           await new Promise(res => setTimeout(res, 500)); // wait a bit
-           thumbBlob = await generateThumbnail(preview);
-        }
-
-        const user = (await window.supabaseClient.auth.getUser()).data.user;
-        const uid = user ? user.id : 'anonymous';
-        
-        // Upload main file
-        const fileName = \`\${uid}/\${Date.now()}_media.\${selectedFile.name.split('.').pop()}\`;
-        const bucket = 'kalakar-reels'; // or post-media
-        
-        const { data, error } = await window.supabaseClient.storage.from(bucket).upload(fileName, selectedFile, { upsert: true });
-        if (error) throw error;
-        
-        const { data: pubData } = window.supabaseClient.storage.from(bucket).getPublicUrl(fileName);
-        mediaFileId = pubData.publicUrl;
-
-        uploadProgress.textContent = '70%';
-        progressBar.style.width = '70%';
-
-        // Upload thumbnail
-        if (thumbBlob) {
-            const thumbName = \`\${uid}/\${Date.now()}_thumb.jpg\`;
-            await window.supabaseClient.storage.from(bucket).upload(thumbName, thumbBlob, { upsert: true });
-            const { data: thumbData } = window.supabaseClient.storage.from(bucket).getPublicUrl(thumbName);
-            thumbnailFileId = thumbData.publicUrl;
-        }
-      }
-
-      uploadProgress.textContent = '90%';
-      progressBar.style.width = '90%';
-
-      // Extract hashtags
-      const caption = captionInput.value;
-      const hashtags = (caption.match(/#[a-zA-Z0-9]+/g) || []).map(t => t.slice(1));
-
-      // Build Post
-      const post = {
-        id: 'post_' + Math.random().toString(36).substr(2, 9),
-        authorId: 'c1', // Mocked to current user
-        contentText: caption,
-        videoUrl: mediaFileId,
-        thumbnailUrl: thumbnailFileId || '',
-        hashtags: hashtags,
-        location: document.getElementById('composer-location').value,
-        applaudCount: 0,
-        commentCount: 0,
-        createdAt: new Date().toISOString()
-      };
-
-      // Mock DB save by adding to local state or reloading
-      const storedPosts = JSON.parse(localStorage.getItem('kalakar_posts') || '[]');
-      storedPosts.unshift(post);
-      localStorage.setItem('kalakar_posts', JSON.stringify(storedPosts));
-
-      uploadProgress.textContent = '100%';
-      progressBar.style.width = '100%';
-
-      setTimeout(() => {
-        modal.classList.add('hidden');
-        resetComposer();
-        renderStage(); // refresh feed
-        showToast('Post created successfully!', 'success');
-      }, 500);
-
-    } catch (err) {
-      console.error(err);
-      alert('Upload failed: ' + err.message);
-      postBtn.disabled = false;
-      uploadingState.classList.add('hidden');
-    }
-  });
-
-  function resetComposer() {
+  function reset() {
     selectedFile = null;
-    captionInput.value = '';
-    highlights.innerHTML = '';
-    preview.src = '';
-    preview.classList.add('hidden');
-    dropZone.querySelector('p').classList.remove('hidden');
-    dropZone.querySelector('span').classList.remove('hidden');
-    document.getElementById('composer-location').value = '';
-    document.getElementById('composer-link-prompt').checked = false;
-    document.getElementById('composer-uploading-state').classList.add('hidden');
+    caption.value = '';
+    document.getElementById('drop-zone-content').classList.remove('hidden');
+    document.getElementById('composer-preview-video').classList.add('hidden');
+    document.getElementById('composer-preview-img').classList.add('hidden');
+    document.getElementById('composer-upload-status').classList.add('hidden');
+    document.getElementById('composer-progress-bar').style.width = '0%';
     postBtn.disabled = true;
+    postBtn.textContent = 'Post to Stage ✦';
   }
-}
-
-function showToast(message, type = 'info') {
-  // Simple toast
-  alert(message);
 }
 
 export function openPostComposer() {
-  document.getElementById('post-composer-modal').classList.remove('hidden');
+  const modal = document.getElementById('post-composer-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  } else {
+    initPostComposer();
+    const newModal = document.getElementById('post-composer-modal');
+    if (newModal) newModal.classList.remove('hidden');
+  }
 }

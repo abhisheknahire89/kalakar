@@ -19,7 +19,10 @@ const ASSETS = [
     '/js/components/search.js',
     '/js/components/settings.js',
     '/js/components/toast.js',
-    '/js/components/skeleton.js'
+    '/js/components/skeleton.js',
+    '/js/auth.js',
+    '/js/views/login.js',
+    '/js/views/onboarding.js'
 ];
 
 self.addEventListener('install', (event) => {

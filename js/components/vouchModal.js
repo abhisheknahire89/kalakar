@@ -1,108 +1,119 @@
+import { databases, APPWRITE_CONFIG, ID, Query } from '../appwriteClient.js';
+import { StorageServiceInstance as StorageService } from './core.js';
+import { showToast } from './toast.js';
+
 export function initVouchModal() {
-  const modalHTML = `
-    <div id="vouch-modal" class="modal-overlay hidden">
-      <div class="modal-content panel profile-large" style="max-width: 480px; padding: 24px; text-align: left; background: var(--bg-primary);">
-        <header class="modal-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="font-size: 1.3rem; margin: 0;">⭐ Vouch for <span id="vouch-target-name">Talent</span></h2>
-          <button class="close-btn" id="close-vouch-btn" style="background:none; border:none; font-size: 1.5rem; color: var(--text); cursor:pointer;">&times;</button>
-        </header>
+  const existing = document.getElementById('vouch-modal');
+  if (existing) existing.remove();
 
-        <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 0.9rem; margin-bottom: 12px; color: var(--muted);">What skill are you vouching for?</label>
-          <div id="vouch-skill-suggestions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
-            <!-- Suggested skills injected dynamically -->
-          </div>
-          <input type="text" id="vouch-custom-skill" placeholder="Or type a custom skill..." style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-elevated); border: 1px solid var(--line); color: var(--text);">
-        </div>
+  const modal = document.createElement('div');
+  modal.id = 'vouch-modal';
+  modal.className = 'modal-overlay hidden';
+  modal.innerHTML = `
+    <div class="modal-content panel profile-large" style="max-width: 440px; padding: 24px;">
+      <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 1.3rem;">Vouch for <span id="vouch-target-name">...</span></h2>
+        <button id="close-vouch-btn" class="ghost small" style="font-size: 1.5rem;">&times;</button>
+      </header>
 
-        <div style="margin-bottom: 24px;">
-          <label style="display: block; font-size: 0.9rem; margin-bottom: 8px; color: var(--muted);">Short testimonial (optional):</label>
-          <textarea id="vouch-testimonial" placeholder="Max 280 characters" maxlength="280" style="width: 100%; height: 80px; padding: 10px; border-radius: 8px; background: var(--bg-elevated); border: 1px solid var(--line); color: var(--text); resize: none;"></textarea>
-          <div style="text-align: right; font-size: 0.75rem; color: var(--muted); margin-top: 4px;"><span id="vouch-char-count">0</span> / 280</div>
-        </div>
+      <div style="background: var(--surface-2); border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--line);">
+        <p class="meta" style="font-size: 0.85rem; margin-bottom: 8px;">A Vouch is a professional endorsement of reliability and craft. It boosts their visibility in casting calls.</p>
+        <div id="vouch-target-label" style="font-weight: 700; color: var(--brand-gold);">Actor · Mumbai</div>
+      </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 12px;">
-          <button class="ghost" id="cancel-vouch-btn" style="padding: 10px 20px; border-radius: 8px;">Cancel</button>
-          <button class="primary action-gold" id="submit-vouch-btn" style="padding: 10px 20px; border-radius: 8px; font-weight: 600;">Submit ⭐</button>
+      <div style="margin-bottom: 20px;">
+        <label class="meta mb-2 block">Choose a Professional Vouch Category</label>
+        <div class="vouch-chip-group" style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button class="vouch-chip active" data-category="Reliability">Reliability</button>
+          <button class="vouch-chip" data-category="Technical Mastery">Technical Mastery</button>
+          <button class="vouch-chip" data-category="Creative Vision">Creative Vision</button>
+          <button class="vouch-chip" data-category="On-Set Etiquette">On-Set Etiquette</button>
         </div>
       </div>
+
+      <div style="margin-bottom: 24px;">
+        <label class="meta mb-2 block">Personal Note (Optional)</label>
+        <textarea id="vouch-comment" placeholder="Why are you vouching for them?" style="width: 100%; height: 80px; background: transparent; border: 1px solid var(--line); border-radius: 8px; color: var(--text); padding: 12px; resize: none;"></textarea>
+      </div>
+
+      <button id="submit-vouch-btn" class="primary full-width" style="padding: 14px; font-weight: 700; background: var(--brand-gold); color: black;">Confirm Professional Vouch</button>
     </div>
   `;
 
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  document.body.appendChild(modal);
 
-  const modal = document.getElementById('vouch-modal');
-  const cancelBtn = document.getElementById('cancel-vouch-btn');
   const closeBtn = document.getElementById('close-vouch-btn');
   const submitBtn = document.getElementById('submit-vouch-btn');
-  const testimonial = document.getElementById('vouch-testimonial');
-  const charCount = document.getElementById('vouch-char-count');
-  const customSkill = document.getElementById('vouch-custom-skill');
+  const chips = document.querySelectorAll('.vouch-chip');
+  let selectedCategory = 'Reliability';
 
-  const closeModal = () => {
-    modal.classList.add('hidden');
-    customSkill.value = '';
-    testimonial.value = '';
-    charCount.textContent = '0';
-    document.querySelectorAll('.vouch-skill-chip').forEach(c => c.classList.remove('selected'));
+  closeBtn.onclick = () => modal.classList.add('hidden');
+
+  chips.forEach(chip => {
+    chip.onclick = () => {
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      selectedCategory = chip.dataset.category;
+    };
+  });
+
+  submitBtn.onclick = async () => {
+    const targetId = modal.dataset.targetId;
+    const profile = StorageService.get('kalakar_user_profile');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Verifying...';
+
+    try {
+        // 1. Create Vouch Document
+        await databases.createDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.vouches,
+            ID.unique(),
+            {
+                vouchId: profile.$id, // The one giving the vouch
+                talentId: targetId,   // The one receiving the vouch
+                category: selectedCategory,
+                comment: document.getElementById('vouch-comment').value,
+                createdAt: new Date().toISOString()
+            }
+        );
+
+        // 2. Increment Vouch Count on Target Profile
+        const targetDoc = await databases.getDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.creators,
+            targetId
+        );
+
+        await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.creators,
+            targetId,
+            { 
+              vouchCount: (targetDoc.vouchCount || 0) + 1,
+              reliability: Math.min(100, (targetDoc.reliability || 80) + 2) // Boost reliability
+            }
+        );
+
+        showToast('Endorsement verified!', 'success');
+        modal.classList.add('hidden');
+
+    } catch (error) {
+        console.error('Vouch error:', error);
+        showToast('Vouch failed. Try again later.', 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm Professional Vouch';
+    }
   };
-
-  cancelBtn.addEventListener('click', closeModal);
-  closeBtn.addEventListener('click', closeModal);
-
-  testimonial.addEventListener('input', () => {
-    charCount.textContent = testimonial.value.length;
-  });
-
-  submitBtn.addEventListener('click', () => {
-    const selectedChip = document.querySelector('.vouch-skill-chip.selected');
-    const skill = selectedChip ? selectedChip.textContent : customSkill.value.trim();
-
-    if (!skill) {
-      alert('Please select or enter a skill.');
-      return;
-    }
-
-    if (window.showToast) {
-      window.showToast(`You vouched for ${document.getElementById('vouch-target-name').textContent}'s ${skill}!`, 'success');
-    } else {
-      alert(`You vouched for ${document.getElementById('vouch-target-name').textContent}'s ${skill}!`);
-    }
-
-    closeModal();
-  });
 }
 
-export function openVouchModal(voucheeName, craft) {
+export function openVouchModal(name, craft, id) {
+  initVouchModal(); // Ensures fresh modal
   const modal = document.getElementById('vouch-modal');
-  document.getElementById('vouch-target-name').textContent = voucheeName;
-
-  // Render suggestions based on craft Context
-  const skillsMap = {
-    'Actor': ['Method Acting', 'Improvisation', 'Dialogue Delivery', 'Dance', 'Emotional Range'],
-    'Cinematographer': ['Steadicam', 'Handheld', 'Lighting', 'Color Science'],
-    'Director': ['Actor Direction', 'Visual Storytelling', 'Shot Planning'],
-    'Editor': ['Narrative Pacing', 'Color Grading', 'VFX Integration']
-  };
-
-  const suggestions = skillsMap[craft] || ['Professionalism', 'Punctuality', 'Teamwork'];
-  const container = document.getElementById('vouch-skill-suggestions');
-  
-  container.innerHTML = suggestions.map(skill => 
-    `<button class="ghost small vouch-skill-chip" style="border-radius: 20px; padding: 6px 14px; border: 1px solid var(--line);">${skill}</button>`
-  ).join('');
-
-  container.querySelectorAll('.vouch-skill-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      container.querySelectorAll('.vouch-skill-chip').forEach(c => c.classList.remove('selected'));
-      chip.classList.add('selected');
-      chip.style.borderColor = 'var(--brand-gold)';
-      chip.style.color = 'var(--brand-gold)';
-    });
-  });
-
+  document.getElementById('vouch-target-name').textContent = name;
+  document.getElementById('vouch-target-label').textContent = `${craft}`;
+  modal.dataset.targetId = id;
   modal.classList.remove('hidden');
 }
-
-// Ensure init
-document.addEventListener('DOMContentLoaded', initVouchModal);

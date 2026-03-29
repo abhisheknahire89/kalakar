@@ -1,83 +1,156 @@
-import { StorageServiceInstance as StorageService, setView } from './core.js';
+import { databases, Query, APPWRITE_CONFIG, client } from '../appwriteClient.js';
+import { StorageServiceInstance as StorageService } from './core.js';
+import { showToast } from './toast.js';
 
-export function renderNotifications() {
+let unsubscribeNotifications = null;
+
+export async function renderNotifications() {
   const container = document.querySelector('#notifications-view');
   if (!container) return;
 
-  const notifications = StorageService.get('kalakar_notifications') || [
-    { id: 'n1', type: 'shortlist', text: 'You were shortlisted for "Assistant Director"', time: Date.now() - 3600000, read: false },
-    { id: 'n2', type: 'vouch', text: 'Rahul Shinde vouched for your "Handheld" skill', time: Date.now() - 86400000, read: true },
-    { id: 'n3', type: 'deal', text: 'Dharma Productions sent you a Deal Memo', time: Date.now() - 172800000, read: false }
-  ];
+  const myProfile = StorageService.get('kalakar_user_profile');
+  if (!myProfile) return;
 
-  // Group by date
-  const groups = {
-    'Today': notifications.filter(n => (Date.now() - n.time) < 86400000),
-    'Earlier': notifications.filter(n => (Date.now() - n.time) >= 86400000)
-  };
+  container.innerHTML = '<div class="skeleton-container"></div>';
 
-  let html = `
-    <div class="view-header" style="margin-bottom: 24px;">
-      <h2 style="font-family: 'Yatra One', serif; font-size: 1.8rem;">Notifications</h2>
-    </div>
-  `;
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.collections.notifications,
+      [
+        Query.equal('userId', myProfile.$id),
+        Query.orderDesc('createdAt'),
+        Query.limit(50)
+      ]
+    );
 
-  for (const [title, items] of Object.entries(groups)) {
-    if (items.length === 0) continue;
-    
-    html += `<h4 class="meta" style="margin-bottom: 12px; font-size: 0.8rem; text-transform: uppercase;">${title}</h4>`;
-    
-    items.forEach(n => {
-      html += `
-        <div class="notification-card panel mb-3 ${n.read ? '' : 'unread'}" style="padding: 16px; display: flex; gap: 16px; align-items: flex-start; border: 1px solid ${n.read ? 'var(--line)' : 'var(--brand-gold)'}; background: ${n.read ? 'var(--surface)' : 'rgba(197, 160, 89, 0.05)'};">
-          <div class="notif-icon" style="font-size: 1.5rem;">
-            ${n.type === 'shortlist' ? '📋' : n.type === 'vouch' ? '⭐' : '💸'}
-          </div>
-          <div style="flex: 1;">
-            <p style="margin: 0; font-size: 0.95rem;">${n.text}</p>
-            <span class="meta" style="font-size: 0.75rem;">${formatTime(n.time)}</span>
-          </div>
-          ${!n.read ? '<div style="width: 8px; height: 8px; background: var(--brand-gold); border-radius: 50%; margin-top: 6px;"></div>' : ''}
-        </div>
-      `;
-    });
-  }
+    const notifications = response.documents;
 
-  if (notifications.length === 0) {
-    html += `
-      <div class="empty-state text-center" style="padding: 40px;">
-        <p>You're all caught up!</p>
+    let html = `
+      <div class="view-header" style="margin-bottom: 24px;">
+        <h2 style="font-family: 'Yatra One', serif; font-size: 1.8rem;">Notifications</h2>
       </div>
     `;
-  }
 
-  container.innerHTML = html;
-  
-  // Mark all as read
-  setTimeout(() => {
-    notifications.forEach(n => n.read = true);
-    StorageService.set('kalakar_notifications', notifications);
-    updateNotificationBadge();
-  }, 2000);
-}
-
-export function updateNotificationBadge() {
-  const notifications = StorageService.get('kalakar_notifications') || [];
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const badges = document.querySelectorAll('.nav-badge');
-  badges.forEach(b => {
-    if (unreadCount > 0) {
-      b.textContent = unreadCount;
-      b.classList.remove('hidden');
+    if (notifications.length === 0) {
+      html += `
+        <div class="empty-state text-center" style="padding: 60px 20px;">
+          <div style="font-size:3rem; margin-bottom:1rem;">🔔</div>
+          <h3>You're all caught up!</h3>
+          <p class="meta">New casting calls and vouches will appear here.</p>
+        </div>
+      `;
     } else {
-      b.classList.add('hidden');
+      notifications.forEach(n => {
+        html += `
+          <div class="notification-card panel mb-3 ${n.isRead ? '' : 'unread'}" 
+               style="padding: 16px; display: flex; gap: 16px; align-items: flex-start; 
+                      border: 1px solid ${n.isRead ? 'var(--line)' : 'var(--brand-gold)'}; 
+                      background: ${n.isRead ? 'var(--surface)' : 'rgba(197, 160, 89, 0.05)'};">
+            <div class="notif-icon" style="font-size: 1.5rem;">
+              ${getIcon(n.type)}
+            </div>
+            <div style="flex: 1;">
+              <p style="margin: 0; font-size: 0.95rem;">${n.text}</p>
+              <span class="meta" style="font-size: 0.75rem;">${formatTime(n.createdAt)}</span>
+            </div>
+            ${!n.isRead ? '<div style="width: 8px; height: 8px; background: var(--brand-gold); border-radius: 50%; margin-top: 6px;"></div>' : ''}
+          </div>
+        `;
+      });
     }
-  });
+
+    container.innerHTML = html;
+
+    // Mark current batch as read
+    const unreadIds = notifications.filter(n => !n.isRead).map(n => n.$id);
+    if (unreadIds.length > 0) {
+        for (const id of unreadIds) {
+            await databases.updateDocument(
+                APPWRITE_CONFIG.databaseId,
+                APPWRITE_CONFIG.collections.notifications,
+                id,
+                { isRead: true }
+            );
+        }
+        updateNotificationBadge(); // Refresh badge
+    }
+
+  } catch (error) {
+    console.error('Notifications error:', error);
+    container.innerHTML = '<p class="text-center meta">Failed to load notifications.</p>';
+  }
 }
 
-function formatTime(ts) {
-  const diff = Date.now() - ts;
+export async function updateNotificationBadge() {
+  const myProfile = StorageService.get('kalakar_user_profile');
+  if (!myProfile) return;
+
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.collections.notifications,
+      [
+        Query.equal('userId', myProfile.$id),
+        Query.equal('isRead', false),
+        Query.limit(1) // We just need total
+      ]
+    );
+
+    const unreadCount = response.total;
+    const badges = document.querySelectorAll('.nav-badge');
+    badges.forEach(b => {
+      if (unreadCount > 0) {
+        b.textContent = unreadCount > 9 ? '9+' : unreadCount;
+        b.classList.remove('hidden');
+      } else {
+        b.classList.add('hidden');
+      }
+    });
+  } catch (error) {
+    // Ignore badge errors
+  }
+}
+
+export function setupNotificationListener() {
+    const myProfile = StorageService.get('kalakar_user_profile');
+    if (!myProfile) return;
+
+    if (unsubscribeNotifications) unsubscribeNotifications();
+
+    unsubscribeNotifications = client.subscribe(
+        `databases.${APPWRITE_CONFIG.databaseId}.collections.${APPWRITE_CONFIG.collections.notifications}.documents`,
+        (response) => {
+            if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+                const notif = response.payload;
+                if (notif.userId === myProfile.$id) {
+                    showToast(notif.text, 'info');
+                    updateNotificationBadge();
+                    // If viewing notifications right now, refresh
+                    const currentView = document.getElementById('notifications-view');
+                    if (currentView && !currentView.classList.contains('hidden')) {
+                        renderNotifications();
+                    }
+                }
+            }
+        }
+    );
+}
+
+function getIcon(type) {
+    switch(type) {
+        case 'shortlist': return '📋';
+        case 'vouch': return '⭐';
+        case 'deal': return '💸';
+        case 'connection': return '🤝';
+        default: return '🔔';
+    }
+}
+
+function formatTime(isoStr) {
+  const diff = Date.now() - new Date(isoStr).getTime();
+  if (diff < 60000) return 'Just now';
   if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
   if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
-  return new Date(ts).toLocaleDateString();
+  return new Date(isoStr).toLocaleDateString();
 }

@@ -1,21 +1,24 @@
 {
-  "name": "Kalakar",
+  "name": "Kalakar - Entertainment Network",
   "short_name": "Kalakar",
-  "start_url": "/index.html",
+  "description": "Professional network for the Indian Entertainment Industry",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#121212",
-  "theme_color": "#121212",
-  "description": "The professional network for the Indian entertainment industry.",
+  "background_color": "#0a0a0b",
+  "theme_color": "#c5a059",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "https://kalakar.in/logo192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "https://img.icons8.com/gold/512/theatre_mask.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "https://kalakar.in/logo512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "https://img.icons8.com/gold/192/theatre_mask.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

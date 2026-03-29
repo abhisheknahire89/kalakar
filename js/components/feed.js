@@ -1,17 +1,15 @@
-import { StorageServiceInstance as StorageService } from './core.js';
+import { databases, Query, APPWRITE_CONFIG, storage } from '../appwriteClient.js';
 import { openTalentProfile } from './network.js';
-import { openChat, renderChatList } from './chat.js';
 import { createVideoPlayer } from './videoPlayer.js';
 import { openPostComposer } from './postComposer.js';
 
 const greenroomFeed = document.querySelector('#greenroom-feed');
-const uploaderModal = document.querySelector('#uploader-modal');
 const openUploadBtn = document.querySelector('.post-input-btn');
-const closeUploadBtn = document.querySelector('#close-uploader-btn');
-const fileInput = document.querySelector('#file-input');
-const uploadArea = document.querySelector('#drop-zone');
-const uploadingState = document.querySelector('#uploading-state');
-const uploadProgress = document.querySelector('#upload-progress');
+const promptCta = document.querySelector('.prompt-banner__cta');
+
+let lastPostId = null;
+let isLoading = false;
+let currentFilter = 'For You';
 
 export async function renderStage() {
   // Update Filter Tabs active state
@@ -20,20 +18,21 @@ export async function renderStage() {
     pill.addEventListener('click', (e) => {
       filterPills.forEach(p => p.classList.remove('active'));
       e.target.classList.add('active');
-      // Re-trigger render based on filter
-      renderPosts(e.target.textContent);
+      currentFilter = e.target.textContent;
+      lastPostId = null; // Reset pagination
+      renderPosts(currentFilter);
     });
   });
 
   // Handle Create Post button
   if (openUploadBtn) {
-    openUploadBtn.addEventListener('click', () => {
+    openUploadBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       openPostComposer();
     });
   }
 
   // Handle Weekly Prompt CTA
-  const promptCta = document.querySelector('.prompt-banner__cta');
   if (promptCta) {
     promptCta.addEventListener('click', () => {
       openPostComposer();
@@ -44,246 +43,227 @@ export async function renderStage() {
     });
   }
 
+  // Infinite Scroll Observer
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && !isLoading && lastPostId) {
+      renderPosts(currentFilter, true);
+    }
+  }, { threshold: 0.5 });
+
+  const sentinel = document.createElement('div');
+  sentinel.id = 'feed-sentinel';
+  greenroomFeed.after(sentinel);
+  observer.observe(sentinel);
+
   renderPosts('For You');
   renderTrendingWidget();
+  renderWeeklyPrompt();
 }
 
-async function renderPosts(filterTopic) {
-  greenroomFeed.innerHTML = '';
+async function renderPosts(filterTopic, append = false) {
+  if (isLoading) return;
+  isLoading = true;
 
-  // Skeleton Loaders
-  greenroomFeed.innerHTML = `
-    <div class="video-slot panel mb-4" style="padding: 16px;">
-      <div class="skeleton" style="height: 48px; width: 100%; margin-bottom: 12px;"></div>
-      <div class="skeleton" style="height: 400px; width: 100%; margin-bottom: 12px; border-radius: var(--radius-md);"></div>
-      <div class="skeleton" style="height: 60px; width: 100%;"></div>
-    </div>
-    <div class="video-slot panel mb-4" style="padding: 16px;">
-      <div class="skeleton" style="height: 48px; width: 100%; margin-bottom: 12px;"></div>
-      <div class="skeleton" style="height: 400px; width: 100%; margin-bottom: 12px; border-radius: var(--radius-md);"></div>
-      <div class="skeleton" style="height: 60px; width: 100%;"></div>
-    </div>
-  `;
-
-  // Simulate network delay
-  setTimeout(() => {
+  if (!append) {
     greenroomFeed.innerHTML = '';
+    showSkeletons();
+  }
 
-    const creators = StorageService.get('kalakar_creators') || [];
-    
-    // Mock user posts based on existing creator profiles
-    const mockPosts = [
-      {
-        id: 'p1',
-        author: creators[0] || { name: 'Ishaan Verma', role: 'Actor', city: 'Mumbai', verified: true, reliability: 98 },
-        videoUrl: 'https://cdn.pixabay.com/video/2016/09/21/5412-183786498_large.mp4',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=800&q=80',
-        caption: "Practicing the new monologue for City of Dust. Let me know what you think! #Acting #Monologue",
-        applaudCount: 24,
-        commentCount: 5,
-        shareCount: 3,
-        createdAt: Date.now() - 3600000 * 2
-      },
-      {
-        id: 'p2',
-        author: creators[1] || { name: 'Alisha Rao', role: 'Cinematographer', city: 'Pune', verified: true, reliability: 92 },
-        videoUrl: 'https://cdn.pixabay.com/video/2015/08/08/212-135732739_large.mp4',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1533750516457-47f0171bb3ee?auto=format&fit=crop&w=800&q=80',
-        caption: "Testing the new RED V-Raptor setup in low light. The shadows roll off beautifully. #Cinematography #Camera",
-        applaudCount: 42,
-        commentCount: 8,
-        shareCount: 1,
-        createdAt: Date.now() - 3600000 * 5
-      }
+  try {
+    const queries = [
+      Query.limit(10),
+      Query.orderDesc('createdAt')
     ];
 
-    // Combine with newly created local posts
-    const localPosts = JSON.parse(localStorage.getItem('kalakar_posts') || '[]');
-    const allPosts = [...localPosts, ...mockPosts];
+    if (lastPostId) {
+      queries.push(Query.cursorAfter(lastPostId));
+    }
 
-    if (allPosts.length === 0) {
-      greenroomFeed.innerHTML = `
-        <div class="empty-state text-center" style="padding: 40px; border: 1px dashed var(--line); border-radius: 12px;">
-          <h3 style="margin-bottom: 8px;">The Stage is empty.</h3>
-          <p class="meta" style="margin-bottom: 16px;">Be the first to share your craft!</p>
-          <button class="primary action-gold create-post-empty-btn">Create Post</button>
-        </div>
-      `;
-      document.querySelector('.create-post-empty-btn').addEventListener('click', openPostComposer);
+    // Role-based filtering
+    const roleFilters = ['Actors', 'Cinematographers', 'Editors', 'Directors'];
+    if (roleFilters.includes(filterTopic)) {
+      // In a real app, you'd filter by the author's role. 
+      // This requires a join or storing role on the post.
+      // For now, we'll assume the post has a 'category' attribute matching the filter.
+      queries.push(Query.equal('category', filterTopic.toLowerCase().slice(0, -1)));
+    }
+
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.collections.posts,
+      queries
+    );
+
+    if (!append) greenroomFeed.innerHTML = '';
+
+    if (response.documents.length === 0 && !append) {
+      renderEmptyState();
+      isLoading = false;
       return;
     }
 
-    allPosts.forEach(post => {
-      // Setup the Post Card
-      const postCard = document.createElement('div');
-      postCard.className = 'post-card panel mb-4';
-      postCard.style.padding = '16px';
-      postCard.style.position = 'relative';
+    lastPostId = response.documents.length > 0 ? response.documents[response.documents.length - 1].$id : null;
 
-      // Author Header
-      const header = document.createElement('div');
-      header.className = 'post-header';
-      header.style.display = 'flex';
-      header.style.alignItems = 'center';
-      header.style.justifyContent = 'space-between';
-      header.style.marginBottom = '12px';
-      
-      const authorId = post.author?.id || post.authorId;
-      const authorObj = post.author || creators.find(c => c.id === authorId) || { name: 'You', role: 'Artist', city: 'Unknown', verified: true };
+    for (const post of response.documents) {
+      // Fetch Author Details
+      const author = await databases.getDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.creators,
+        post.authorId
+      );
 
-      header.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <img src="https://i.pravatar.cc/150?u=${encodeURIComponent(authorObj.name)}" class="user-avatar" style="width: 48px; height: 48px; border-radius: 50%;" alt="Avatar">
-          <div class="creator-info" style="margin: 0;">
-            <div class="creator-name" style="font-size: 1.05rem; font-weight: 700;">
-              ${authorObj.name} 
-              ${authorObj.verified ? '<span class="verified-icon" title="Verified Professional" style="color:var(--brand-gold);">★</span>' : ''}
-              <span class="vouch-badge" style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--brand-gold); margin-left: 8px;">CINTAA</span>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--muted); margin:0;">${authorObj.role} · ${authorObj.city} · 2h</p>
-          </div>
-        </div>
-        <button class="ghost small connect-btn" style="border-radius: 20px; padding: 6px 16px;">Connect</button>
-      `;
-      postCard.appendChild(header);
-
-      // Video Player Container
-      const videoContainer = document.createElement('div');
-      videoContainer.className = 'post-video-container';
-      videoContainer.style.marginBottom = '12px';
-      postCard.appendChild(videoContainer);
-
-      // Caption
-      const captionEl = document.createElement('div');
-      captionEl.className = 'post-caption';
-      captionEl.style.fontSize = '0.95rem';
-      captionEl.style.marginBottom = '16px';
-      captionEl.style.lineHeight = '1.5';
-      
-      const hashtagsColored = post.caption || post.contentText || '';
-      captionEl.innerHTML = hashtagsColored.replace(/(#[a-zA-Z0-9]+)/g, '<span style="color: var(--brand-gold); cursor:pointer;">$1</span>');
-      postCard.appendChild(captionEl);
-
-      // Actions Row
-      const actions = document.createElement('div');
-      actions.className = 'post-actions';
-      actions.style.display = 'flex';
-      actions.style.gap = '16px';
-      actions.style.borderTop = '1px solid var(--line)';
-      actions.style.paddingTop = '12px';
-
-      actions.innerHTML = `
-        <button class="post-action-btn action-applaud" data-id="${post.id}" style="background:transparent; border:none; color:var(--text); cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:500;">
-          <span class="icon">👏</span> <span class="count">${post.applaudCount || 0}</span>
-        </button>
-        <button class="post-action-btn action-comment" style="background:transparent; border:none; color:var(--text); cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:500;">
-          <span class="icon">💬</span> <span>${post.commentCount || 0}</span>
-        </button>
-        <button class="post-action-btn action-share" style="background:transparent; border:none; color:var(--text); cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:500;">
-          <span class="icon">🔁</span> <span>${post.shareCount || 0}</span>
-        </button>
-        <button class="post-action-btn action-save" style="margin-left:auto; background:transparent; border:none; color:var(--text); cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:500;">
-          <span class="icon">📌</span> <span>Save</span>
-        </button>
-      `;
-      postCard.appendChild(actions);
-
+      const postCard = createPostCard(post, author);
       greenroomFeed.appendChild(postCard);
 
-      // Initialize Video Player instances
-      if (post.videoUrl) {
-        createVideoPlayer(videoContainer, {
-          videoUrl: post.videoUrl,
-          thumbnailUrl: post.thumbnailUrl,
-          aspectRatio: '16/9' // hardcoded or dynamic based on post type
+      // Init Video
+      if (post.videoFileId) {
+        const videoUrl = storage.getFileView(APPWRITE_CONFIG.buckets.avatars, post.videoFileId).href;
+        const thumbUrl = post.thumbnailFileId ? 
+            storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, post.thumbnailFileId, 400).href : '';
+            
+        createVideoPlayer(postCard.querySelector('.post-video-container'), {
+          videoUrl: videoUrl,
+          thumbnailUrl: thumbUrl,
+          aspectRatio: '9/16'
         });
       }
-
-      // Applaud toggle logic
-      const applaudBtn = postCard.querySelector('.action-applaud');
-      let applauded = false;
-      applaudBtn.addEventListener('click', function() {
-        applauded = !applauded;
-        const countSpan = this.querySelector('.count');
-        let current = parseInt(countSpan.textContent);
-        if (applauded) {
-          this.style.color = 'var(--brand-gold)';
-          countSpan.textContent = current + 1;
-        } else {
-          this.style.color = 'var(--text)';
-          countSpan.textContent = current - 1;
-        }
-      });
-      
-      const saveBtn = postCard.querySelector('.action-save');
-      let saved = false;
-      saveBtn.addEventListener('click', function() {
-        saved = !saved;
-        if (saved) {
-          this.style.color = 'var(--brand-gold)';
-          this.querySelector('span:last-child').textContent = 'Saved';
-        } else {
-          this.style.color = 'var(--text)';
-          this.querySelector('span:last-child').textContent = 'Save';
-        }
-      });
-    });
-
-  }, 800);
+    }
+  } catch (error) {
+    console.error('Feed error:', error);
+    if (!append) greenroomFeed.innerHTML = '<p class="text-center meta">Failed to load feed. Check connection.</p>';
+  } finally {
+    isLoading = false;
+  }
 }
 
-export function renderTrendingWidget() {
-  const trendingContainer = document.querySelector('#trending-talents-list');
-  if (!trendingContainer) return;
+function createPostCard(post, author) {
+  const card = document.createElement('div');
+  card.className = 'post-card panel mb-4';
+  card.style.padding = '16px';
 
-  trendingContainer.innerHTML = `
-    <div class="skeleton" style="height: 60px; width: 100%; margin-bottom: 8px;"></div>
-    <div class="skeleton" style="height: 60px; width: 100%; margin-bottom: 8px;"></div>
-    <div class="skeleton" style="height: 60px; width: 100%;"></div>
+  const avatarUrl = author.avatarFileId ? 
+    storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, author.avatarFileId, 100).href : 
+    `https://i.pravatar.cc/100?u=${author.$id}`;
+
+  card.innerHTML = `
+    <div class="post-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px; cursor:pointer;" class="author-link" data-id="${author.$id}">
+        <img src="${avatarUrl}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+        <div>
+          <div style="font-weight: 700;">${author.name} ${author.isVerified ? '<span style="color:var(--brand-gold);">★</span>' : ''}</div>
+          <p class="meta" style="font-size: 0.8rem;">${author.primaryCraft} · ${author.city}</p>
+        </div>
+      </div>
+      <button class="ghost small" style="border-radius: 20px;">Follow</button>
+    </div>
+    <div class="post-video-container" style="margin-bottom: 12px; background: #000; border-radius: 12px; overflow: hidden; min-height: 400px;"></div>
+    <div class="post-caption" style="font-size: 0.95rem; margin-bottom: 16px; line-height: 1.5;">
+      ${(post.contentText || '').replace(/(#[a-zA-Z0-9]+)/g, '<span style="color: var(--brand-gold);">$1</span>')}
+    </div>
+    <div class="post-actions" style="display: flex; gap: 20px; border-top: 1px solid var(--line); padding-top: 12px;">
+      <button class="post-action-btn" style="background:none; border:none; color:var(--text); cursor:pointer;"><span class="icon">👏</span> ${post.applaudCount || 0}</button>
+      <button class="post-action-btn" style="background:none; border:none; color:var(--text); cursor:pointer;"><span class="icon">💬</span> ${post.commentCount || 0}</button>
+      <button class="post-action-btn" style="background:none; border:none; color:var(--text); cursor:pointer;"><span class="icon">🚀</span></button>
+      <button class="post-action-btn" style="margin-left:auto; background:none; border:none; color:var(--text); cursor:pointer;"><span class="icon">📌</span></button>
+    </div>
   `;
 
-  setTimeout(() => {
-    const creators = StorageService.get('kalakar_creators') || [];
-    const trending = creators
-      .sort((a, b) => (b.reliability || 0) - (a.reliability || 0))
-      .slice(0, 5);
+  card.querySelector('.author-link').addEventListener('click', () => openTalentProfile(author.$id));
+  return card;
+}
 
-    trendingContainer.innerHTML = '';
-    trending.forEach((talent, index) => {
+function showSkeletons() {
+  for (let i = 0; i < 2; i++) {
+    const s = document.createElement('div');
+    s.className = 'post-card panel mb-4';
+    s.style.padding = '16px';
+    s.innerHTML = `
+      <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+        <div class="skeleton" style="width: 48px; height: 48px; border-radius: 50%;"></div>
+        <div style="flex:1;"><div class="skeleton" style="height: 16px; width: 40%; margin-bottom: 8px;"></div><div class="skeleton" style="height: 12px; width: 25%;"></div></div>
+      </div>
+      <div class="skeleton" style="height: 400px; width: 100%; border-radius: 12px; margin-bottom: 12px;"></div>
+      <div class="skeleton" style="height: 20px; width: 80%; margin-bottom: 8px;"></div>
+    `;
+    greenroomFeed.appendChild(s);
+  }
+}
+
+function renderEmptyState() {
+  greenroomFeed.innerHTML = `
+    <div class="empty-state text-center" style="padding: 60px 20px;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">🎥</div>
+      <h3 style="margin-bottom: 8px;">The Stage is yours.</h3>
+      <p class="meta" style="margin-bottom: 24px;">Be the first to upload a masterclass or performance reel.</p>
+      <button class="primary action-gold" id="empty-feed-post-btn">Upload First Video</button>
+    </div>
+  `;
+  document.getElementById('empty-feed-post-btn')?.addEventListener('click', openPostComposer);
+}
+
+export async function renderTrendingWidget() {
+  const container = document.querySelector('#trending-talents-list');
+  if (!container) return;
+
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.collections.creators,
+      [Query.limit(5), Query.orderDesc('vouchCount')]
+    );
+
+    container.innerHTML = '';
+    response.documents.forEach((talent, i) => {
       const item = document.createElement('div');
       item.className = 'trending-item';
       item.style.display = 'flex';
       item.style.alignItems = 'center';
       item.style.gap = '12px';
-      item.style.padding = '8px 0';
-      item.style.borderBottom = index === trending.length - 1 ? 'none' : '1px solid var(--line)';
+      item.style.padding = '12px 0';
+      item.style.borderBottom = i === response.documents.length - 1 ? 'none' : '1px solid var(--line)';
       item.style.cursor = 'pointer';
 
+      const avatar = talent.avatarFileId ? 
+        storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, talent.avatarFileId, 80).href : 
+        `https://i.pravatar.cc/80?u=${talent.$id}`;
+
       item.innerHTML = `
-        <div style="font-weight: 700; color: var(--brand-gold); font-family: monospace; min-width: 20px;">#${index + 1}</div>
-        <img src="https://i.pravatar.cc/150?u=${encodeURIComponent(talent.name)}" style="width: 32px; height: 32px; border-radius: 50%;">
-        <div style="flex: 1; overflow: hidden;">
-          <div style="font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${talent.name}</div>
-          <div style="font-size: 0.75rem; color: var(--muted);">${talent.role}</div>
+        <div style="font-weight: 700; color: var(--brand-gold); min-width: 24px;">#${i + 1}</div>
+        <img src="${avatar}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+        <div style="flex:1; overflow:hidden;">
+          <div style="font-weight: 600; font-size: 0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${talent.name}</div>
+          <div class="meta" style="font-size: 0.75rem;">${talent.primaryCraft}</div>
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--success);">${talent.reliability || 85}%</div>
-          <div style="font-size: 0.65rem; color: var(--muted);">Reliability</div>
+          <div style="font-weight: 700; color: var(--success); font-size: 0.8rem;">${talent.vouchCount || 0}</div>
+          <div class="meta" style="font-size: 0.65rem;">Vouches</div>
         </div>
       `;
-
-      item.addEventListener('click', () => {
-        openTalentProfile(talent.id);
-      });
-
-      trendingContainer.appendChild(item);
+      item.addEventListener('click', () => openTalentProfile(talent.$id));
+      container.appendChild(item);
     });
-  }, 1000);
+  } catch (error) {
+    console.error('Trending error:', error);
+  }
 }
 
-// Ensure initPostComposer is called when app loads
-document.addEventListener('DOMContentLoaded', () => {
-  import('./postComposer.js').then(module => {
-    module.initPostComposer();
-  });
-});
+async function renderWeeklyPrompt() {
+  const titleEl = document.querySelector('.prompt-banner__title');
+  const detailsEl = document.querySelector('.prompt-banner__details');
+  
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.collections.weeklyPrompts,
+      [Query.limit(1), Query.orderDesc('createdAt')]
+    );
+
+    if (response.documents.length > 0) {
+      const prompt = response.documents[0];
+      if (titleEl) titleEl.textContent = prompt.title;
+      if (detailsEl) detailsEl.textContent = prompt.description;
+    }
+  } catch (error) {
+    // Keep defaults
+  }
+}
