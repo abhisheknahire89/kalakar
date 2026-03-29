@@ -132,13 +132,13 @@ export async function openTalentProfile(creatorId) {
   }
 
   // Populate Header Data
-  nameEl.innerHTML = `${creator.name} ${creator.verified ? '<span style="color:var(--brand-gold); font-size: 1.5rem;">✓</span>' : ''}`;
+  nameEl.innerHTML = `${creator.name} ${creator.verified ? '<span class="verified-icon" title="Verified Professional" style="color:var(--brand-gold);">★</span>' : ''}`;
   roleCityEl.textContent = `${creator.role} · ${creator.city}`;
 
   // Populate Tags
   tagsContainer.innerHTML = '';
   if (creator.union) {
-    tagsContainer.innerHTML += `<span class="talent-tag">${creator.union}</span>`;
+    tagsContainer.innerHTML += `<span class="talent-tag" style="background: rgba(255,215,0,0.1); color: var(--brand-gold);">${creator.union}</span>`;
   }
   if (creator.vouchedBy !== 'System') {
     tagsContainer.innerHTML += `<span class="talent-tag vouched">Vouched by ${creator.vouchedBy}</span>`;
@@ -149,26 +149,68 @@ export async function openTalentProfile(creatorId) {
     });
   }
 
-  // Populate Credits
+  // Populate Add-ons (Vouch button + msg layout)
+  let actionRow = document.getElementById('tp-action-row');
+  if(!actionRow) {
+    actionRow = document.createElement('div');
+    actionRow.id = 'tp-action-row';
+    actionRow.style.display = 'flex';
+    actionRow.style.gap = '12px';
+    actionRow.style.justifyContent = 'center';
+    actionRow.style.marginTop = '16px';
+    actionRow.style.width = '100%';
+    const parent = document.querySelector('.profile-header-large');
+    parent.appendChild(actionRow);
+  }
+
+  actionRow.innerHTML = `
+    <button class="primary action-gold open-chat-btn" data-target="negotiation-workspace" data-id="${creatorId}" style="padding: 10px 24px; border-radius: 8px; font-weight: 600; flex:1;">💬 Message</button>
+    <button class="ghost vouch-talent-btn" data-name="${creator.name}" data-craft="${creator.role}" style="padding: 10px 24px; border-radius: 8px; font-weight: 600; flex:1; border: 1px solid var(--brand-gold); color: var(--brand-gold);">⭐ Vouch</button>
+  `;
+
+  actionRow.querySelector('.vouch-talent-btn').addEventListener('click', (e) => {
+    import('./vouchModal.js').then(module => module.openVouchModal(e.target.dataset.name, e.target.dataset.craft));
+  });
+  
+  actionRow.querySelector('.open-chat-btn').addEventListener('click', (e) => {
+    openChat(e.target.dataset.id);
+  });
+
+  // Prompt 3: Populate Verified Credits (Timeline UI)
   creditsContainer.innerHTML = '';
   if (creator.credits && creator.credits.length > 0) {
-    creator.credits.forEach(credit => {
+    creator.credits.forEach((credit, index) => {
       creditsContainer.innerHTML += `
-        <div class="credit-item">
-          <div>
-            <h4>${credit.title} <span class="meta" style="font-weight: normal;">(${credit.year})</span></h4>
-            <p>${credit.role}</p>
+        <div class="credit-timeline-item" style="position: relative; padding-left: 24px; margin-bottom: 24px;">
+          <!-- Node Line -->
+          <div style="position: absolute; left: 6px; top: 8px; bottom: ${index === creator.credits.length - 1 ? 'auto' : '-24px'}; width: 2px; background: var(--line);"></div>
+          <!-- Node Dot -->
+          <div style="position: absolute; left: 0; top: 6px; width: 14px; height: 14px; border-radius: 50%; ${credit.status === 'Verified' ? 'background: var(--success); border: 2px solid var(--success);' : 'background: var(--bg-primary); border: 2px solid var(--muted);'}"></div>
+          
+          <div style="display: flex; gap: 16px; align-items: flex-start;">
+            <div style="font-family: monospace; font-size: 0.9rem; color: var(--muted); padding-top: 2px;">${credit.year || '2025'}</div>
+            <div style="flex:1;">
+              <h4 style="margin: 0 0 4px 0; font-size: 1rem;">"${credit.title}"</h4>
+              <p style="margin: 0 0 4px 0; font-size: 0.85rem; color: var(--text-secondary);">Role: ${credit.role}</p>
+              ${credit.director ? `<p style="margin: 0 0 4px 0; font-size: 0.85rem; color: var(--text-secondary);">Director: ${credit.director}</p>` : ''}
+              
+              <div style="margin-top: 6px; font-size: 0.8rem;">
+                ${credit.status === 'Verified' 
+                  ? `<span style="color: var(--success);">✓ Verified by ${credit.verifiedBy || 'System'}</span>`
+                  : `<span style="color: var(--muted);">○ Unverified — <a href="#" style="color: var(--brand-gold); text-decoration: underline;">Request verification</a></span>`
+                }
+              </div>
+            </div>
           </div>
-          <span class="credit-status">Verified</span>
         </div>
       `;
     });
   } else {
-    creditsContainer.innerHTML = `<div class="empty-state">No verified credits listed yet.</div>`;
+    creditsContainer.innerHTML = `<div class="empty-state text-center" style="padding: 32px 0;">No verified credits listed yet.<br><br><button class="ghost small">Request References</button></div>`;
   }
 
   // Populate Kit/Equipment
-  if (creator.kit) {
+  if (creator.kit && creator.kit !== 'None') {
     kitEl.textContent = creator.kit;
     kitEl.parentElement.style.display = 'block';
   } else {

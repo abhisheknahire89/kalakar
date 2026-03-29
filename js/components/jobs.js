@@ -1,5 +1,6 @@
 import { StorageServiceInstance as StorageService, setView } from './core.js';
 import { openChat } from './chat.js';
+import { createKanbanBoard } from './kanban.js';
 
 const recentJobsFeed = document.querySelector('#recent-jobs-feed');
 const featuredJobsCarousel = document.querySelector('#featured-jobs-carousel-content');
@@ -52,7 +53,10 @@ export async function renderJobs(filter = 'all') {
         <span class="job-meta__tag">${job.location}</span>
         <span class="job-meta__tag" style="color: var(--success); border-color: var(--success);">Urgent</span>
       </div>
-      <button class="job-card__btn open-chat-btn" data-target="negotiation-workspace">💸 Initiate Deal</button>
+      <div style="display:flex; justify-content:space-between; margin-top: 12px; align-items:center;">
+        <button class="ghost small view-applicants-btn" data-id="${job.id}" style="padding: 4px 12px; border-radius: 20px;">Applicants</button>
+        <button class="job-card__btn open-chat-btn" data-target="negotiation-workspace" style="margin-top:0;">💸 Deal</button>
+      </div>
     `;
     if (featuredJobsCarousel) featuredJobsCarousel.appendChild(card);
   });
@@ -73,11 +77,21 @@ export async function renderJobs(filter = 'all') {
         <span class="job-meta__tag">${job.location}</span>
         ${job.tags.map(t => `<span class="job-meta__tag">${t}</span>`).join('')}
       </div>
-      <button class="job-card__btn open-chat-btn" data-target="negotiation-workspace">💸 Initiate Deal</button>
+      <div style="display:flex; justify-content:space-between; margin-top: 12px; align-items:center;">
+        <button class="ghost small view-applicants-btn" data-id="${job.id}" style="padding: 4px 12px; border-radius: 20px;">View Applicants</button>
+        <button class="job-card__btn open-chat-btn" data-target="negotiation-workspace" style="margin-top:0;">💸 Initiate Deal</button>
+      </div>
     `;
     if (recentJobsFeed) recentJobsFeed.appendChild(card);
   });
+
+  document.querySelectorAll('.view-applicants-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      viewApplicants(e.target.dataset.id);
+    });
+  });
 }
+
 export function viewApplicants(jobId) {
   const allJobs = StorageService.get(StorageService.KEYS.JOBS) || [];
   const job = allJobs.find(j => j.id === jobId);
@@ -85,51 +99,38 @@ export function viewApplicants(jobId) {
   const jobApps = apps.filter(a => a.jobId === jobId);
 
   currentJobTitleSpan.textContent = job.title;
-  if (recentJobsFeed) recentJobsFeed.closest('.view').classList.add('hidden');
+  document.querySelector('.view-header').classList.add('hidden'); // hide main jobs header
+  recentJobsFeed.closest('#jobs-view').querySelector('h3').classList.add('hidden');
+  recentJobsFeed.closest('#jobs-view').querySelectorAll('h3')[1].classList.add('hidden');
+  recentJobsFeed.classList.add('hidden');
+  featuredJobsCarousel.classList.add('hidden');
+  
   applicantsSection.classList.remove('hidden');
-
-  applicantsList.innerHTML = '';
-  jobApps.forEach(app => {
-    const card = document.createElement('article');
-    card.className = 'card';
-    card.innerHTML = `
-      <div class="card-row">
-        <div>
-          <h3>${app.name}</h3>
-          <p>${app.role}</p>
-        </div>
-        <span class="badge ${app.status === 'shortlisted' ? 'shortlisted' : ''}">${app.status}</span>
-      </div>
-      <div class="card-row" style="margin-top: 10px;">
-        <p class="meta">Applied ${new Date(app.createdAt).toLocaleDateString()}</p>
-        <div class="actions">
-          ${app.status !== 'shortlisted'
-        ? `<button class="primary small shortlist-btn" data-id="${app.id}">Shortlist</button>`
-        : `<button class="ghost small msg-btn" data-id="${app.id}">Message</button>`}
-        </div>
-      </div>
-    `;
-    applicantsList.appendChild(card);
+  
+  // Prompt 2: Kanban Board injection
+  const { renderApplications } = createKanbanBoard(applicantsList, {
+    jobId: jobId,
+    onStatusChange: (applicationId, newStatus) => {
+      const apps = StorageService.get(StorageService.KEYS.APPLICATIONS);
+      const index = apps.findIndex(a => a.id === applicationId);
+      if (index !== -1) {
+        apps[index].status = newStatus;
+        StorageService.set(StorageService.KEYS.APPLICATIONS, apps);
+        
+        // Notification logic (Prompt 6 framework)
+        showToast(`Application moved to ${newStatus.toUpperCase()}`, 'success');
+      }
+    }
   });
 
-  document.querySelectorAll('.shortlist-btn').forEach(btn => {
-    btn.addEventListener('click', () => shortlistApplicant(btn.dataset.id, jobId));
-  });
-
-  document.querySelectorAll('.msg-btn').forEach(btn => {
-    btn.addEventListener('click', () => openChat(btn.dataset.id));
-  });
+  renderApplications(jobApps);
 }
 
-export function shortlistApplicant(appId, jobId) {
-  const apps = StorageService.get(StorageService.KEYS.APPLICATIONS);
-  const index = apps.findIndex(a => a.id === appId);
-  if (index !== -1) {
-    apps[index].status = 'shortlisted';
-    StorageService.set(StorageService.KEYS.APPLICATIONS, apps);
-    viewApplicants(jobId);
-  }
+function showToast(msg, type) {
+    if(window.showToast) window.showToast(msg, type); // Global fallback
+    else alert(msg);
 }
+
 // Modal Logic
 document.querySelector('#post-job-trigger')?.addEventListener('click', () => {
   postJobModal.classList.remove('hidden');
