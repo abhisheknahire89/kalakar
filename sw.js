@@ -1,69 +1,40 @@
 const CACHE_NAME = 'kalakar-v1';
-const ASSETS_TO_CACHE = [
+const ASSETS = [
     '/',
     '/index.html',
     '/styles.css',
     '/app.js',
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+    '/manifest.json',
+    '/js/components/core.js',
+    '/js/components/feed.js',
+    '/js/components/jobs.js',
+    '/js/components/network.js',
+    '/js/components/chat.js',
+    '/js/components/videoPlayer.js',
+    '/js/components/postComposer.js',
+    '/js/components/vouchModal.js',
+    '/js/components/kanban.js',
+    '/js/components/contractBuilder.js',
+    '/js/components/notifications.js',
+    '/js/components/search.js',
+    '/js/components/settings.js',
+    '/js/components/toast.js',
+    '/js/components/skeleton.js'
 ];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(ASSETS_TO_CACHE))
-            .then(() => self.skipWaiting())
-    );
-});
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.filter((name) => name !== CACHE_NAME)
-                    .map((name) => caches.delete(name))
-            );
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(ASSETS);
         })
     );
-    self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-    // We only want to intercept basic GET requests to our own origin or known CDNs
-    // We bypass API calls to Supabase so we don't accidentally cache dynamic auth/db json.
-    if (event.request.method !== 'GET' || event.request.url.includes('supabase.co')) {
-        return;
-    }
-
+    // Offline-first strategy
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Return cached response if found
-                if (response) {
-                    return response;
-                }
-
-                // Otherwise try fetching from network
-                return fetch(event.request).then(
-                    function (response) {
-                        // Check if we received a valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-
-                        // Clone the response because the stream can only be consumed once
-                        var responseToCache = response.clone();
-
-                        caches.open(CACHE_NAME)
-                            .then(function (cache) {
-                                cache.put(event.request, responseToCache);
-                            });
-
-                        return response;
-                    }
-                );
-            }).catch(() => {
-                // Fallback for when both Cache and Network fail (offline mode)
-                // Usually, you would return an offline fallback HTML here if the request mode is 'navigate'
-            })
+        caches.match(event.request).then((response) => {
+            return response || fetch(event.request);
+        })
     );
 });
