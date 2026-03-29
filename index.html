@@ -586,31 +586,52 @@
         </div>
       </section>
 
-      <!-- MESSAGING SECTION -->
+      <!-- MESSAGING SECTION (Prompt 4 Refactored) -->
       <section class="view hidden" id="messages-view">
         <div class="messaging-layout">
-          <!-- Chat Sidebar: Active Deals -->
+          <!-- Chat Sidebar: Professional Contacts -->
           <div class="chat-sidebar">
             <div class="chat-sidebar-header">
-              <h3>Active Deals</h3>
+              <h3>Professional Deals</h3>
             </div>
             <div id="chat-list" class="chat-list">
-              <!-- Chat threads rendered here -->
+              <!-- Chat threads rendered via chat.js -->
             </div>
           </div>
 
           <!-- Main Chat Window -->
           <div class="chat-main" id="chat-main-area">
+            <!-- Empty state when no chat selected -->
+            <div id="chat-empty-state" class="chat-window" style="justify-content: center; align-items: center;">
+              <div class="empty-state text-center">
+                <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">💬</div>
+                <h3 style="margin-bottom: 0.5rem;">Select a professional to initiate deal dialogue.</h3>
+                <p class="meta">All conversations are secured and logged for milestone verification.</p>
+              </div>
+            </div>
+
             <div class="chat-header hidden" id="chat-header">
-              <h3 id="chat-user-name">Talent Name</h3>
-              <button class="ghost small">View Deal Terms</button>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="https://i.pravatar.cc/150?img=11" id="chat-user-avatar" style="width: 36px; height: 36px; border-radius: 50%;">
+                <div>
+                  <h3 id="chat-user-name" style="margin: 0; font-size: 1rem; font-family: 'Inter', sans-serif;">Talent Name</h3>
+                  <div id="chat-user-status" style="font-size: 0.75rem; color: var(--success);">● Online</div>
+                </div>
+              </div>
+              <div class="chat-header-actions" style="display: flex; gap: 12px;">
+                <button class="ghost small" id="initiate-contract-btn" style="border-radius: 20px; color: var(--brand-gold); border-color: var(--brand-gold);">📜 New Deal Memo</button>
+                <button class="ghost small" style="border-radius: 20px; width: 40px; height: 40px; padding: 0;">⋮</button>
+              </div>
             </div>
-            <div id="chat-window" class="chat-window">
-              <div class="empty-state">Select a professional to initiate deal dialogue.</div>
+
+            <div id="chat-window" class="chat-window hidden">
+              <!-- Messages injected here via chat.js -->
             </div>
+
             <div class="chat-input-area hidden" id="chat-input-area">
-              <input type="text" id="chat-message-input" placeholder="Type message (deal terms, avail checks, etc.)...">
-              <button class="primary" id="send-msg-btn">Send</button>
+              <button class="icon-btn" id="attach-file-btn" style="color: var(--muted);"><span class="icon">📎</span></button>
+              <input type="text" id="chat-message-input" placeholder="Type message (deal terms, availability context)...">
+              <button class="primary action-gold" id="send-msg-btn" style="border-radius: 20px; padding: 10px 24px;">Send</button>
             </div>
           </div>
         </div>

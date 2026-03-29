@@ -45,6 +45,7 @@ export async function renderStage() {
   }
 
   renderPosts('For You');
+  renderTrendingWidget();
 }
 
 async function renderPosts(filterTopic) {
@@ -232,7 +233,52 @@ async function renderPosts(filterTopic) {
 }
 
 export function renderTrendingWidget() {
-  // Unchanged from original setup or omit if not required
+  const trendingContainer = document.querySelector('#trending-talents-list');
+  if (!trendingContainer) return;
+
+  trendingContainer.innerHTML = `
+    <div class="skeleton" style="height: 60px; width: 100%; margin-bottom: 8px;"></div>
+    <div class="skeleton" style="height: 60px; width: 100%; margin-bottom: 8px;"></div>
+    <div class="skeleton" style="height: 60px; width: 100%;"></div>
+  `;
+
+  setTimeout(() => {
+    const creators = StorageService.get('kalakar_creators') || [];
+    const trending = creators
+      .sort((a, b) => (b.reliability || 0) - (a.reliability || 0))
+      .slice(0, 5);
+
+    trendingContainer.innerHTML = '';
+    trending.forEach((talent, index) => {
+      const item = document.createElement('div');
+      item.className = 'trending-item';
+      item.style.display = 'flex';
+      item.style.alignItems = 'center';
+      item.style.gap = '12px';
+      item.style.padding = '8px 0';
+      item.style.borderBottom = index === trending.length - 1 ? 'none' : '1px solid var(--line)';
+      item.style.cursor = 'pointer';
+
+      item.innerHTML = `
+        <div style="font-weight: 700; color: var(--brand-gold); font-family: monospace; min-width: 20px;">#${index + 1}</div>
+        <img src="https://i.pravatar.cc/150?u=${encodeURIComponent(talent.name)}" style="width: 32px; height: 32px; border-radius: 50%;">
+        <div style="flex: 1; overflow: hidden;">
+          <div style="font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${talent.name}</div>
+          <div style="font-size: 0.75rem; color: var(--muted);">${talent.role}</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--success);">${talent.reliability || 85}%</div>
+          <div style="font-size: 0.65rem; color: var(--muted);">Reliability</div>
+        </div>
+      `;
+
+      item.addEventListener('click', () => {
+        openTalentProfile(talent.id);
+      });
+
+      trendingContainer.appendChild(item);
+    });
+  }, 1000);
 }
 
 // Ensure initPostComposer is called when app loads
