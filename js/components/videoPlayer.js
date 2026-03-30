@@ -51,7 +51,7 @@ export function createVideoPlayer(containerEl, { videoUrl, thumbnailUrl, aspectR
     if (isNaN(seconds)) return "0:00";
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
-    return ${"`${m}:${s.toString().padStart(2, '0')}`"};
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   let controlsTimeout;
@@ -103,12 +103,12 @@ export function createVideoPlayer(containerEl, { videoUrl, thumbnailUrl, aspectR
 
   video.addEventListener('timeupdate', () => {
     const percent = (video.currentTime / video.duration) * 100;
-    progressBar.style.width = ${"`${percent}%`"};
-    timeDisplay.textContent = ${"`${formatTime(video.currentTime)} / ${formatTime(video.duration)}`"};
+    progressBar.style.width = `${percent}%`;
+    timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
   });
 
   video.addEventListener('loadedmetadata', () => {
-    timeDisplay.textContent = ${"`0:00 / ${formatTime(video.duration)}`"};
+    timeDisplay.textContent = `0:00 / ${formatTime(video.duration)}`;
   });
 
   video.addEventListener('waiting', () => {

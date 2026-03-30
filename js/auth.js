@@ -23,7 +23,7 @@ export async function getCreatorProfile(userId) {
   try {
     const result = await databases.listDocuments(
       APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.profiles,
+      APPWRITE_CONFIG.collections.creators,
       [Query.equal('userId', userId), Query.limit(1)]
     );
     return result.documents.length > 0 ? result.documents[0] : null;
@@ -97,7 +97,7 @@ export async function createCreatorProfile(profileData) {
     const user = await account.get();
     const profile = await databases.createDocument(
       APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.profiles,
+      APPWRITE_CONFIG.collections.creators,
       ID.unique(),
       {
         userId: user.$id,

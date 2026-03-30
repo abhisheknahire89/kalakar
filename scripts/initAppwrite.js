@@ -1,4 +1,4 @@
-import { Client, Databases, Storage, Permission, Role } from 'node-appwrite';
+import { Client, Databases, Storage, Permission, Role, ID, Query } from 'node-appwrite';
 
 const endpoint = 'https://fra.cloud.appwrite.io/v1';
 const projectId = '69c8ee1b0037e381d046';
@@ -15,117 +15,97 @@ const storage = new Storage(client);
 const DATABASE_DEFAULT_ID = 'kalakar_db';
 
 const COLLECTIONS = [
-  { id: 'profiles', name: 'Profiles' },
+  { id: 'creators', name: 'Creators' },
   { id: 'posts', name: 'Posts' },
   { id: 'jobs', name: 'Jobs' },
   { id: 'applications', name: 'Applications' },
-  { id: 'contracts', name: 'Contracts' },
-  { id: 'escrow_milestones', name: 'Escrow Milestones' },
   { id: 'vouches', name: 'Vouches' },
   { id: 'messages', name: 'Messages' },
   { id: 'notifications', name: 'Notifications' },
-  { id: 'credits', name: 'Verified Credits' },
-  { id: 'applauds', name: 'Applauds' },
-  { id: 'comments', name: 'Comments' },
-  { id: 'chats', name: 'Chat Rooms' },
-  { id: 'agencies', name: 'Agencies' },
-  { id: 'saved_items', name: 'Saved Items' },
-  { id: 'settings', name: 'User Settings' },
-  { id: 'reports', name: 'Reports' }
-];
-
-const BUCKETS = [
-  { id: 'avatars', name: 'Profile Avatars' },
-  { id: 'resumes', name: 'Resumes' },
-  { id: 'reels', name: 'Video Reels' },
-  { id: 'post_media', name: 'Post Media' },
-  { id: 'attachments', name: 'Chat Attachments' },
-  { id: 'contracts', name: 'Contract PDFs' },
-  { id: 'reports', name: 'Report Files' }
+  { id: 'weeklyPrompts', name: 'Weekly Prompts' }
 ];
 
 async function init() {
-  console.log('Appwrite Initialization Script Started...');
-  let hasErrors = false;
+  console.log('Appwrite Initialization & Seeding Started...');
   
   // 1. Database
   try {
     await databases.create(DATABASE_DEFAULT_ID, 'Kalakar Database');
-    console.log(`✅ Database created: ${DATABASE_DEFAULT_ID}`);
+    console.log(`✅ Database created`);
   } catch (err) {
-    if (err.code === 409) {
-      console.log(`ℹ️ Database already exists: ${DATABASE_DEFAULT_ID}`);
-    } else {
-      console.error(`❌ Failed to create database:`, err.message);
-      hasErrors = true;
-    }
+    if (err.code !== 409) console.error(`❌ DB error:`, err.message);
   }
 
-  // 2. Collections
-  console.log('\\n--- Initializing 17 Collections ---');
+  // 2. Collections & Attributes
   for (const col of COLLECTIONS) {
     try {
-      await databases.createCollection(
-        DATABASE_DEFAULT_ID,
-        col.id,
-        col.name,
-        [Permission.read(Role.any()), Permission.write(Role.users())]
-      );
-      console.log(`✅ Collection created: ${col.id} (${col.name})`);
+      await databases.createCollection(DATABASE_DEFAULT_ID, col.id, col.name, [Permission.read(Role.any()), Permission.write(Role.users())]);
+      console.log(`✅ Collection created: ${col.id}`);
     } catch (err) {
-      if (err.code === 409) {
-        console.log(`ℹ️ Collection already exists: ${col.id}`);
-      } else {
-        console.error(`❌ Failed to create collection ${col.id}:`, err.message);
-        hasErrors = true;
-      }
+      if (err.code !== 409) console.error(`❌ Collection ${col.id} error:`, err.message);
     }
   }
 
-  // Set minimum attributes (basic setup)
-  // For 'profiles'
-  try {
-    await databases.createStringAttribute(DATABASE_DEFAULT_ID, 'profiles', 'name', 255, true);
-    await databases.createStringAttribute(DATABASE_DEFAULT_ID, 'profiles', 'role', 255, false);
-    await databases.createStringAttribute(DATABASE_DEFAULT_ID, 'profiles', 'city', 255, false);
-    await databases.createBooleanAttribute(DATABASE_DEFAULT_ID, 'profiles', 'verified', false, false, false);
-    console.log(`✅ Profiles Attributes added.`);
-  } catch (err) {
-    if (err.code !== 409) console.error(`❌ Failed profiles attributes:`, err.message);
+  // Attributes for 'creators'
+  const creatorAttrs = [
+    { key: 'userId', type: 'string', size: 255, required: true },
+    { key: 'name', type: 'string', size: 255, required: true },
+    { key: 'primaryCraft', type: 'string', size: 255, required: false },
+    { key: 'city', type: 'string', size: 255, required: false },
+    { key: 'vouchCount', type: 'integer', required: false, default: 0 },
+    { key: 'isVerified', type: 'boolean', required: false, default: false }
+  ];
+
+  for (const attr of creatorAttrs) {
+      try {
+          if (attr.type === 'string') await databases.createStringAttribute(DATABASE_DEFAULT_ID, 'creators', attr.key, attr.size, attr.required);
+          if (attr.type === 'integer') await databases.createIntegerAttribute(DATABASE_DEFAULT_ID, 'creators', attr.key, attr.required, 0, 1000000, attr.default);
+          if (attr.type === 'boolean') await databases.createBooleanAttribute(DATABASE_DEFAULT_ID, 'creators', attr.key, attr.required, attr.default);
+      } catch (e) {}
   }
 
-  // 3. Storage Buckets
-  console.log('\\n--- Initializing 7 Storage Buckets ---');
-  for (const bucket of BUCKETS) {
+  // Attributes for 'posts'
+  const postAttrs = [
+    { key: 'authorId', type: 'string', size: 255, required: true },
+    { key: 'contentText', type: 'string', size: 5000, required: false },
+    { key: 'category', type: 'string', size: 255, required: false },
+    { key: 'createdAt', type: 'string', size: 255, required: false }
+  ];
+
+  for (const attr of postAttrs) {
     try {
-        await storage.createBucket(
-            bucket.id,
-            bucket.name,
-            [Permission.read(Role.any()), Permission.write(Role.users())],
-            false, // File Security
-            true, // Enable Anti Virus
-            [], // allowed file extensions
-            0, // allow all sizes
-            true, // Encryption
-            true // Anti virus
-        );
-        console.log(`✅ Bucket created: ${bucket.id} (${bucket.name})`);
-    } catch (err) {
-        if (err.code === 409) {
-            console.log(`ℹ️ Bucket already exists: ${bucket.id}`);
-        } else {
-            console.error(`❌ Failed to create bucket ${bucket.id}:`, err.message);
-            hasErrors = true;
-        }
-    }
+        await databases.createStringAttribute(DATABASE_DEFAULT_ID, 'posts', attr.key, attr.size, attr.required);
+    } catch (e) {}
   }
 
-  console.log('\\n--- Summary ---');
-  if (hasErrors) {
-    console.log('⚠️ Script finished with some errors. See output above.');
-  } else {
-    console.log('🎉 Successfully created all 17 collections and 7 buckets in Appwrite!');
+  // 3. SEED DATA
+  console.log('\n--- Seeding Data ---');
+  
+  const seedCreators = [
+    { $id: 'ishaan_123', userId: 'user_ishaan', name: 'Ishaan Verma', primaryCraft: 'Actor/Dancer', city: 'Mumbai', vouchCount: 45, isVerified: true },
+    { $id: 'alisha_456', userId: 'user_alisha', name: 'Alisha Rao', primaryCraft: 'Cinematographer', city: 'Pune', vouchCount: 22, isVerified: true }
+  ];
+
+  for (const c of seedCreators) {
+    try {
+        await databases.createDocument(DATABASE_DEFAULT_ID, 'creators', c.$id, c);
+        console.log(`✅ Seeded Creator: ${c.name}`);
+    } catch (e) { if (e.code !== 409) console.error(e.message); }
   }
+
+  const seedPosts = [
+    { authorId: 'ishaan_123', contentText: 'Just wrapped a high-octane dance sequence for an upcoming OTT series! #dance #bollywood', category: 'actor', createdAt: new Date().toISOString() },
+    { authorId: 'alisha_456', contentText: 'Testing the new Alexa 35 in low light. The dynamic range is insane. #cinematography #camera', category: 'cinematographer', createdAt: new Date().toISOString() }
+  ];
+
+  for (const p of seedPosts) {
+    try {
+        await databases.createDocument(DATABASE_DEFAULT_ID, 'posts', ID.unique(), p);
+        console.log(`✅ Seeded Post`);
+    } catch (e) { console.error(e.message); }
+  }
+
+  console.log('\n🎉 Finished!');
 }
 
 init();

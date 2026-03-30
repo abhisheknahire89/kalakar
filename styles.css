@@ -492,20 +492,57 @@ select {
 }
 
 /* Base App Shell adjustment for mobile vs desktop */
-@media (max-width: 760px) {
-  .mobile-only {
-    display: block !important;
-  }
+.sidebar,
+.rightbar,
+.leftbar {
+  display: none;
+}
 
-  .desktop-only {
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(18, 18, 18, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex !important;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.mobile-nav a.active {
+  color: var(--brand-gold);
+}
+
+.mobile-nav svg {
+  width: 24px;
+  height: 24px;
+}
+
+@media (min-width: 1024px) {
+  .mobile-nav {
     display: none !important;
   }
-
-  .app-shell .sidebar,
-  .app-shell .rightbar,
-  .app-shell .leftbar {
-    display: none;
-    /* Hide old sidebars on mobile, rely on drawers */
+  .sidebar,
+  .rightbar,
+  .leftbar {
+    display: grid !important;
   }
 }
 
@@ -963,10 +1000,24 @@ main {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: 225px minmax(0, 540px) 300px;
-  justify-content: center;
-  gap: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 0 16px;
+  margin-top: 16px;
+}
+
+/* Desktop-only: 3-column Grid */
+@media (min-width: 1024px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 225px minmax(0, 540px) 300px;
+    justify-content: center;
+    gap: 24px;
+    padding: 24px;
+    margin-top: 0;
+  }
 }
 
 .sidebar,
