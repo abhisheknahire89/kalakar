@@ -3,6 +3,9 @@ import { createVideoPlayer } from './videoPlayer.js';
 
 let isLoading = false;
 let lastPostId = null;
+const POSTS_COLLECTION = COLLECTIONS.POSTS || COLLECTIONS.posts;
+const CREATORS_COLLECTION = COLLECTIONS.CREATORS || COLLECTIONS.creators;
+const VIDEO_BUCKET = BUCKETS.POST_MEDIA || BUCKETS.post_media || BUCKETS.AVATARS || BUCKETS.avatars;
 
 export async function renderStage(filterTopic = 'For You') {
   const container = document.querySelector('#feed-view');
@@ -55,11 +58,7 @@ async function renderPosts(filterTopic, append = false) {
       queries.push(Query.cursorAfter(lastPostId));
     }
 
-    const response = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.posts,
-      queries
-    );
+    const response = await databases.listDocuments(DATABASE_ID, POSTS_COLLECTION, queries);
 
     console.log('Posts found in Appwrite:', response.documents.length);
     if (!append) greenroomFeed.innerHTML = '';
@@ -74,29 +73,36 @@ async function renderPosts(filterTopic, append = false) {
 
     for (const post of response.documents) {
       try {
-        const author = await databases.getDocument(
-          DATABASE_ID,
-          COLLECTIONS.creators,
-          post.authorId
-        );
+        let author = {
+          $id: post.authorId || 'unknown',
+          name: 'Kalakar Creator',
+          primaryCraft: 'Artist',
+          city: 'Maharashtra'
+        };
+
+        if (post.authorId) {
+          try {
+            author = await databases.getDocument(DATABASE_ID, CREATORS_COLLECTION, post.authorId);
+          } catch (_) {}
+        }
 
         const postCard = createPostCard(post, author);
         greenroomFeed.appendChild(postCard);
 
         if (post.videoFileId) {
-          const videoUrl = storage.getFileView(BUCKETS.avatars, post.videoFileId).href;
+          const videoUrl = storage.getFileView(VIDEO_BUCKET, post.videoFileId).href;
           createVideoPlayer(postCard.querySelector('.post-video-container'), {
             videoUrl: videoUrl,
             aspectRatio: '16/9'
           });
         }
       } catch (postErr) {
-        console.warn('Skipping post due to error (likely missing author):', post.$id, postErr);
+        console.warn('Skipping broken post:', post?.$id);
       }
     }
   } catch (error) {
     console.error('Feed error:', error);
-    if (!append) greenroomFeed.innerHTML = '<p class="text-center meta">Failed to load feed. Check console.</p>';
+    if (!append) greenroomFeed.innerHTML = '<p class="text-center meta">Unable to load Stage right now. Please refresh.</p>';
   } finally {
     isLoading = false;
   }
@@ -114,7 +120,7 @@ function createPostCard(post, author) {
       </div>
     </div>
     <div class="post-content" style="padding:0 16px 16px 16px;">
-      <p style="font-size:0.95rem; line-height:1.5;">${post.contentText}</p>
+      <p style="font-size:0.95rem; line-height:1.5;">${escapeHtml(post.contentText || post.content || '')}</p>
     </div>
     <div class="post-video-container"></div>
   `;
@@ -134,4 +140,13 @@ function renderEmptyState() {
       <p class="meta">No posts found for this category yet.</p>
     </div>
   `;
+}
+
+function escapeHtml(input) {
+  return String(input ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

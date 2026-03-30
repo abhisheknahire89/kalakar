@@ -13,6 +13,11 @@ const chatUserName = document.querySelector('#chat-user-name');
 const chatUserAvatar = document.querySelector('#chat-user-avatar');
 const sendMsgBtn = document.querySelector('#send-msg-btn');
 const initiateContractBtn = document.querySelector('#initiate-contract-btn');
+const CONVERSATIONS_COLLECTION = COLLECTIONS.CONVERSATIONS || COLLECTIONS.conversations;
+const MESSAGES_COLLECTION = COLLECTIONS.MESSAGES || COLLECTIONS.messages;
+const CREATORS_COLLECTION = COLLECTIONS.CREATORS || COLLECTIONS.creators;
+const CONTRACTS_COLLECTION = COLLECTIONS.CONTRACTS || COLLECTIONS.contracts;
+const AVATAR_BUCKET = BUCKETS.AVATARS || BUCKETS.avatars;
 
 let activeConversationId = null;
 let activeRecipientId = null;
@@ -24,7 +29,7 @@ export function initChatModule() {
     try {
         const contract = await databases.createDocument(
             DATABASE_ID,
-            COLLECTIONS.contracts,
+            CONTRACTS_COLLECTION,
             ID.unique(),
             {
                 ...dealData,
@@ -65,7 +70,7 @@ export async function renderChatList() {
   try {
     const response = await databases.listDocuments(
       DATABASE_ID,
-      COLLECTIONS.conversations,
+      CONVERSATIONS_COLLECTION,
       [
         Query.search('participantIds', myProfile.$id),
         Query.orderDesc('updatedAt')
@@ -78,7 +83,7 @@ export async function renderChatList() {
       const recipientId = conv.participantIds.find(id => id !== myProfile.$id);
       const recipient = await databases.getDocument(
         DATABASE_ID,
-        COLLECTIONS.creators,
+        CREATORS_COLLECTION,
         recipientId
       );
 
@@ -86,7 +91,7 @@ export async function renderChatList() {
       item.className = `chat-item ${activeConversationId === conv.$id ? 'active' : ''}`;
       
       const avatar = recipient.avatarFileId ? 
-        storage.getFilePreview(BUCKETS.avatars, recipient.avatarFileId, 100).href : 
+        storage.getFilePreview(AVATAR_BUCKET, recipient.avatarFileId, 100).href : 
         `https://i.pravatar.cc/100?u=${recipient.$id}`;
 
       item.innerHTML = `
@@ -117,20 +122,20 @@ export async function openChat(recipientId) {
   try {
     const recipient = await databases.getDocument(
         DATABASE_ID,
-        COLLECTIONS.creators,
+        CREATORS_COLLECTION,
         recipientId
     );
 
     chatUserName.textContent = recipient.name;
     const avatar = recipient.avatarFileId ? 
-        storage.getFilePreview(BUCKETS.avatars, recipient.avatarFileId, 100).href : 
+        storage.getFilePreview(AVATAR_BUCKET, recipient.avatarFileId, 100).href : 
         `https://i.pravatar.cc/100?u=${recipient.$id}`;
     chatUserAvatar.src = avatar;
 
     // 1. Find or Create Conversation
     const response = await databases.listDocuments(
         DATABASE_ID,
-        COLLECTIONS.conversations,
+        CONVERSATIONS_COLLECTION,
         [
             Query.search('participantIds', myProfile.$id),
             Query.search('participantIds', recipientId)
@@ -142,7 +147,7 @@ export async function openChat(recipientId) {
     } else {
         const newConv = await databases.createDocument(
             DATABASE_ID,
-            COLLECTIONS.conversations,
+            CONVERSATIONS_COLLECTION,
             ID.unique(),
             {
                 participantIds: [myProfile.$id, recipientId],
@@ -175,7 +180,7 @@ async function renderMessages() {
   try {
     const response = await databases.listDocuments(
         DATABASE_ID,
-        COLLECTIONS.messages,
+        MESSAGES_COLLECTION,
         [
             Query.equal('conversationId', activeConversationId),
             Query.orderAsc('createdAt'),
@@ -215,7 +220,7 @@ async function fetchAndRenderContract(contractId, container) {
     try {
         const contract = await databases.getDocument(
             DATABASE_ID,
-            COLLECTIONS.contracts,
+            CONTRACTS_COLLECTION,
             contractId
         );
         container.innerHTML = renderDealMemoCard(contract);
@@ -235,7 +240,7 @@ async function sendMessage(text, type = 'text', contractId = null) {
   try {
     const msg = await databases.createDocument(
         DATABASE_ID,
-        COLLECTIONS.messages,
+        MESSAGES_COLLECTION,
         ID.unique(),
         {
             conversationId: activeConversationId,
@@ -250,7 +255,7 @@ async function sendMessage(text, type = 'text', contractId = null) {
     // Update conversation meta
     await databases.updateDocument(
         DATABASE_ID,
-        COLLECTIONS.conversations,
+        CONVERSATIONS_COLLECTION,
         activeConversationId,
         {
             lastMessage: text || '📜 Deal Memo',
@@ -269,7 +274,7 @@ function setupRealtime() {
     if (unsubscribeMessages) unsubscribeMessages();
 
     unsubscribeMessages = client.subscribe(
-        `databases.${DATABASE_ID}.collections.${COLLECTIONS.messages}.documents`,
+        `databases.${DATABASE_ID}.collections.${MESSAGES_COLLECTION}.documents`,
         (response) => {
             const myProfile = StorageService.get('kalakar_user_profile');
             const msg = response.payload;
@@ -289,7 +294,7 @@ async function handleDealStatus(contractId, newStatus) {
     try {
         await databases.updateDocument(
             DATABASE_ID,
-            COLLECTIONS.contracts,
+            CONTRACTS_COLLECTION,
             contractId,
             { status: newStatus }
         );

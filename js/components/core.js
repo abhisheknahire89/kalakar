@@ -43,4 +43,16 @@ export function setLanguage(lang) {
   });
 }
 
+export function setView(viewName) {
+  if (typeof window.setView === 'function') {
+    window.setView(viewName);
+    return;
+  }
+
+  const next = typeof viewName === 'string' ? viewName.trim().replace(/^#/, '') : '';
+  if (next) {
+    window.location.hash = `#${next}`;
+  }
+}
+
 export const StorageServiceInstance = StorageService;

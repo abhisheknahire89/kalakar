@@ -137,7 +137,7 @@
       </div>
 
       <nav class="header-right nav-links hidden-mobile">
-        <a href="#" class="nav-item active">
+        <a href="#feed" class="nav-item active" data-nav="feed">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
@@ -145,7 +145,7 @@
           </svg>
           <span>Home</span>
         </a>
-        <a href="#" class="nav-item">
+        <a href="#network" class="nav-item" data-nav="network">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
@@ -153,7 +153,7 @@
           </svg>
           <span>Network</span>
         </a>
-        <a href="#" class="nav-item">
+        <a href="#jobs" class="nav-item" data-nav="jobs">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
@@ -161,7 +161,7 @@
           </svg>
           <span>Jobs</span>
         </a>
-        <a href="#" class="nav-item" id="msg-trigger">
+        <a href="#messages" class="nav-item" id="msg-trigger" data-nav="messages">
           <div class="icon-wrapper">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -172,7 +172,7 @@
           </div>
           <span>Messaging</span>
         </a>
-        <a href="#" class="nav-item" data-target="messages">
+        <a href="#notifications" class="nav-item" data-target="notifications" data-nav="notifications">
           <div class="icon-wrapper">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -183,7 +183,7 @@
           </div>
           <span>Notifications</span>
         </a>
-        <div class="nav-item profile-trigger" id="sidebar-trigger">
+        <div class="nav-item profile-trigger" id="sidebar-trigger" data-nav="profile" role="button" tabindex="0" aria-label="Open profile">
           <img src="https://i.pravatar.cc/150?img=11" alt="Profile" class="user-avatar">
           <span class="me-label">Me ▼</span>
         </div>
@@ -489,7 +489,7 @@
     </aside>
 
     <div class="view-panel panel">
-      <section class="view active" id="feed-view">
+      <section class="view active" id="feed-view" data-view="feed">
         <!-- "Start a post" Pill UI (Hidden on Mobile) -->
         <div class="create-post-pill panel mb-4 desktop-only">
           <div class="pill-top">
@@ -526,7 +526,7 @@
         </div>
       </section>
 
-      <section class="view hidden" id="jobs-view">
+      <section class="view hidden" id="jobs-view" data-view="jobs">
         <div class="view-header" style="flex-direction: column; align-items: flex-start; gap: 16px;">
           <h2 style="font-family: 'Yatra One', serif; font-size: 1.8rem; margin: 0;">Casting & Crew</h2>
           <div class="filter-bar"
@@ -564,7 +564,7 @@
         </div>
       </section>
 
-      <section class="view hidden" id="projects-view">
+      <section class="view hidden" id="projects-view" data-view="projects">
         <div class="view-header" style="flex-direction: column; align-items: flex-start; gap: 16px;">
           <h2 style="font-family: 'Yatra One', serif; font-size: 1.8rem; margin: 0;">Active Productions</h2>
           <div class="filter-bar"
@@ -583,7 +583,7 @@
 
       <!-- SHORTLIST MANAGER SECTION -->
       <!-- NETWORK & TALENT DISCOVERY SECTION -->
-      <section class="view hidden" id="network-view">
+      <section class="view hidden" id="network-view" data-view="network">
         <div class="view-header" style="flex-direction: column; align-items: flex-start; gap: 16px;">
           <h2 style="font-family: 'Yatra One', serif; font-size: 1.8rem; margin: 0;">Talent Discovery</h2>
           <div style="width: 100%; position: relative;">
@@ -608,7 +608,7 @@
       </section>
 
       <!-- MESSAGING SECTION (Prompt 4 Refactored) -->
-      <section class="view hidden" id="messages-view">
+      <section class="view hidden" id="messages-view" data-view="messages">
         <div class="messaging-layout">
           <!-- Chat Sidebar: Professional Contacts -->
           <div class="chat-sidebar">
@@ -658,7 +658,7 @@
         </div>
       </section>
 
-      <section class="view hidden" id="notifications-view">
+      <section class="view hidden" id="notifications-view" data-view="notifications">
         <div class="view-header">
           <h2>Notifications</h2>
         </div>
@@ -669,6 +669,16 @@
         <article class="card">
           <h3>Connection Request</h3>
           <p class="meta">Anjali Patankar (Casting Director) wants to connect.</p>
+        </article>
+      </section>
+
+      <section class="view hidden" id="profile-view" data-view="profile">
+        <div class="view-header">
+          <h2>Profile</h2>
+        </div>
+        <article class="card">
+          <h3>Profile Loading</h3>
+          <p class="meta">Preparing your profile details...</p>
         </article>
       </section>
 
@@ -948,7 +958,7 @@
 
   <!-- Global Bottom Navigation (Thumb Zone) -->
   <nav class="bottom-nav">
-    <a href="#" class="nav-item active" data-view="feed">
+    <a href="#feed" class="nav-item active" data-view="feed" data-nav="feed">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
@@ -956,7 +966,7 @@
       </svg>
       <span>Feed</span>
     </a>
-    <a href="#" class="nav-item" data-view="network">
+    <a href="#network" class="nav-item" data-view="network" data-nav="network">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
@@ -972,7 +982,7 @@
       </div>
       <span>Post</span>
     </a>
-    <a href="#" class="nav-item" data-view="jobs">
+    <a href="#jobs" class="nav-item" data-view="jobs" data-nav="jobs">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
@@ -980,7 +990,7 @@
       </svg>
       <span>Jobs</span>
     </a>
-    <a href="#" class="nav-item" data-view="notifications">
+    <a href="#notifications" class="nav-item" data-view="notifications" data-nav="notifications">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
@@ -1149,13 +1159,13 @@
 
   <!-- Mobile Bottom Navigation (Phase 1.2) -->
   <nav class="mobile-nav mobile-only">
-    <a href="#feed" class="active">
+    <a href="#feed" class="active" data-nav="feed">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
       <span>Feed</span>
     </a>
-    <a href="#network">
+    <a href="#network" data-nav="network">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
@@ -1166,13 +1176,13 @@
          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
        </svg>
     </button>
-    <a href="#jobs">
+    <a href="#jobs" data-nav="jobs">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
       </svg>
       <span>Jobs</span>
     </a>
-    <a href="#notifications">
+    <a href="#notifications" data-nav="notifications">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
       </svg>

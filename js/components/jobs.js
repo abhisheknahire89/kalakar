@@ -10,10 +10,15 @@ const applicantsList = document.querySelector('#applicants-list');
 const postJobModal = document.querySelector('#post-job-modal');
 const postJobForm = document.querySelector('#post-job-form');
 const currentJobTitleSpan = document.querySelector('#current-job-title');
+const JOBS_COLLECTION = COLLECTIONS.JOBS || COLLECTIONS.jobs;
+const APPLICATIONS_COLLECTION = COLLECTIONS.APPLICATIONS || COLLECTIONS.applications;
 
 export async function renderJobs(filter = 'all') {
   const userProfile = StorageService.get('kalakar_user_profile');
-  if (!userProfile) return;
+  if (!userProfile) {
+    if (recentJobsFeed) recentJobsFeed.innerHTML = '<p class="text-center meta mt-4">Complete onboarding to access jobs.</p>';
+    return;
+  }
 
   if (recentJobsFeed) recentJobsFeed.innerHTML = '<div class="skeleton-container"></div>';
   if (featuredJobsCarousel) featuredJobsCarousel.innerHTML = '';
@@ -31,7 +36,7 @@ export async function renderJobs(filter = 'all') {
 
     const response = await databases.listDocuments(
       DATABASE_ID,
-      COLLECTIONS.jobs,
+      JOBS_COLLECTION,
       queries
     );
 
@@ -104,13 +109,13 @@ export async function viewApplicants(jobId) {
   try {
     const job = await databases.getDocument(
       DATABASE_ID,
-      COLLECTIONS.jobs,
+      JOBS_COLLECTION,
       jobId
     );
 
     const response = await databases.listDocuments(
         DATABASE_ID,
-        COLLECTIONS.applications,
+        APPLICATIONS_COLLECTION,
         [Query.equal('jobId', jobId)]
     );
 
@@ -128,7 +133,7 @@ export async function viewApplicants(jobId) {
         try {
             await databases.updateDocument(
                 DATABASE_ID,
-                COLLECTIONS.applications,
+                APPLICATIONS_COLLECTION,
                 applicationId,
                 { status: newStatus }
             );
@@ -149,10 +154,14 @@ export async function viewApplicants(jobId) {
 
 async function handleApply(jobId) {
     const profile = StorageService.get('kalakar_user_profile');
+    if (!profile) {
+        showToast('Complete onboarding before applying.', 'info');
+        return;
+    }
     try {
         await databases.createDocument(
             DATABASE_ID,
-            COLLECTIONS.applications,
+            APPLICATIONS_COLLECTION,
             ID.unique(),
             {
                 jobId: jobId,
@@ -179,7 +188,7 @@ postJobForm?.addEventListener('submit', async (e) => {
     try {
         await databases.createDocument(
             DATABASE_ID,
-            COLLECTIONS.jobs,
+            JOBS_COLLECTION,
             ID.unique(),
             {
                 title: document.querySelector('#job-title').value,

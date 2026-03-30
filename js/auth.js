@@ -3,6 +3,7 @@ import { Query } from './appwriteClient.js';
 
 const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
 const OTP_REGEX = /^\d{6}$/;
+const PROFILE_ID_STORAGE_KEY = 'kalakar_profile_id';
 
 const buildSuccess = (data) => ({ success: true, data });
 const buildError = (error) => ({ success: false, error });
@@ -115,10 +116,32 @@ export async function getCreatorProfile() {
       return buildError('Creator profile configuration is missing.');
     }
 
-    const response = await databases.listDocuments(databaseId, creatorsCollection, [
-      Query.orderDesc('$createdAt'),
-      Query.limit(1)
-    ]);
+    const user = await account.get();
+    const persistedProfileId = getPersistedProfileId();
+
+    if (persistedProfileId) {
+      try {
+        const profile = await databases.getDocument(databaseId, creatorsCollection, persistedProfileId);
+        return buildSuccess(profile);
+      } catch (_) {}
+    }
+
+    let response = { documents: [] };
+    try {
+      response = await databases.listDocuments(databaseId, creatorsCollection, [
+        Query.equal('username', [`user_${String(user.$id || '').slice(-6)}`]),
+        Query.limit(1)
+      ]);
+    } catch (_) {
+      response = { documents: [] };
+    }
+
+    if (!Array.isArray(response?.documents) || response.documents.length === 0) {
+      response = await databases.listDocuments(databaseId, creatorsCollection, [
+        Query.orderDesc('$createdAt'),
+        Query.limit(1)
+      ]);
+    }
 
     const profile = Array.isArray(response?.documents) && response.documents.length > 0
       ? response.documents[0]
@@ -128,6 +151,7 @@ export async function getCreatorProfile() {
       return buildError('Creator profile not found.');
     }
 
+    persistProfileId(profile.$id);
     return buildSuccess(profile);
   } catch (error) {
     return buildError(mapAuthError(error));
@@ -154,7 +178,7 @@ export async function createCreatorProfile(profileData = {}) {
       return buildError('Creator profile configuration is missing.');
     }
 
-    const doc = await databases.createDocument(databaseId, creatorsCollection, ID.unique(), {
+    const payload = {
       name: String(profileData.name || user.name || '').trim(),
       username: String(profileData.username || `user_${user.$id?.slice(-6) || 'creator'}`).trim(),
       bio: String(profileData.bio || '').trim(),
@@ -163,10 +187,37 @@ export async function createCreatorProfile(profileData = {}) {
       language: String(profileData.language || 'Marathi').trim(),
       isVerified: false,
       createdAt: new Date().toISOString()
-    });
+    };
+
+    let doc;
+    const existingProfileId = getPersistedProfileId();
+    if (existingProfileId) {
+      try {
+        doc = await databases.updateDocument(databaseId, creatorsCollection, existingProfileId, payload);
+      } catch (_) {
+        doc = null;
+      }
+    }
+
+    if (!doc) {
+      doc = await databases.createDocument(databaseId, creatorsCollection, ID.unique(), payload);
+    }
+
+    persistProfileId(doc.$id);
 
     return buildSuccess({ profile: doc });
   } catch (error) {
     return buildError(mapAuthError(error));
   }
+}
+
+function getPersistedProfileId() {
+  if (typeof window === 'undefined' || !window.localStorage) return '';
+  return String(window.localStorage.getItem(PROFILE_ID_STORAGE_KEY) || '').trim();
+}
+
+function persistProfileId(profileId) {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  if (!profileId) return;
+  window.localStorage.setItem(PROFILE_ID_STORAGE_KEY, String(profileId));
 }

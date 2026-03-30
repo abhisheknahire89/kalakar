@@ -5,6 +5,9 @@ import { showToast } from './toast.js';
 
 const talentGrid = document.querySelector('#talent-grid');
 const talentProfileModal = document.querySelector('#talent-profile-modal');
+const CREATORS_COLLECTION = COLLECTIONS.CREATORS || COLLECTIONS.creators;
+const CREDITS_COLLECTION = COLLECTIONS.CREDITS || COLLECTIONS.credits;
+const AVATAR_BUCKET = BUCKETS.AVATARS || BUCKETS.avatars;
 
 export async function renderNetworkBoard(departmentFilter = 'All', searchQuery = '') {
   if (!talentGrid) return;
@@ -35,7 +38,7 @@ export async function renderNetworkBoard(departmentFilter = 'All', searchQuery =
 
     const response = await databases.listDocuments(
       DATABASE_ID,
-      COLLECTIONS.creators,
+      CREATORS_COLLECTION,
       queries
     );
 
@@ -55,7 +58,7 @@ export async function renderNetworkBoard(departmentFilter = 'All', searchQuery =
       card.style.cursor = 'pointer';
 
       const avatar = creator.avatarFileId ? 
-        storage.getFilePreview(BUCKETS.avatars, creator.avatarFileId, 100).href : 
+        storage.getFilePreview(AVATAR_BUCKET, creator.avatarFileId, 100).href : 
         `https://i.pravatar.cc/100?u=${creator.$id}`;
 
       card.innerHTML = `
@@ -95,7 +98,7 @@ export async function openTalentProfile(creatorId) {
   try {
     const creator = await databases.getDocument(
       DATABASE_ID,
-      COLLECTIONS.creators,
+      CREATORS_COLLECTION,
       creatorId
     );
 
@@ -105,7 +108,7 @@ export async function openTalentProfile(creatorId) {
     
     const avatarContainer = document.getElementById('tp-avatar-container');
     const avatar = creator.avatarFileId ? 
-        storage.getFilePreview(BUCKETS.avatars, creator.avatarFileId, 200).href : 
+        storage.getFilePreview(AVATAR_BUCKET, creator.avatarFileId, 200).href : 
         `https://i.pravatar.cc/200?u=${creator.$id}`;
     avatarContainer.innerHTML = `<img src="${avatar}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--surface-2);">`;
 
@@ -135,7 +138,7 @@ export async function openTalentProfile(creatorId) {
     
     const creditsResponse = await databases.listDocuments(
         DATABASE_ID,
-        COLLECTIONS.credits,
+        CREDITS_COLLECTION,
         [Query.equal('talentId', creatorId), Query.orderDesc('year')]
     );
 

@@ -50,15 +50,16 @@ export function initOnboardingView() {
     nextBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             if (currentStep === 2) {
-                profileData.name = document.getElementById('ob-name').value;
-                profileData.city = document.getElementById('ob-city').value;
+                profileData.name = String(document.getElementById('ob-name')?.value || '').trim();
+                profileData.city = String(document.getElementById('ob-city')?.value || 'Mumbai').trim();
                 if (!profileData.name) {
-                    window.showToast('Please enter your name', 'info');
+                    notify('Please enter your name', 'info');
                     return;
                 }
             }
             if (currentStep === 3) {
-                profileData.yearsExperience = parseInt(document.getElementById('ob-exp').value);
+                const years = parseInt(String(document.getElementById('ob-exp')?.value || '0'), 10);
+                profileData.yearsExperience = Number.isFinite(years) ? years : 0;
             }
             goToStep(currentStep + 1);
         });
@@ -77,12 +78,13 @@ export function initOnboardingView() {
         preview.innerHTML = '<span class="spinner"></span>';
 
         try {
-            const result = await storage.createFile(BUCKETS.avatars, ID.unique(), file);
+            const avatarBucketId = BUCKETS.AVATARS || BUCKETS.avatars;
+            const result = await storage.createFile(avatarBucketId, ID.unique(), file);
             profileData.avatarFileId = result.$id;
-            const url = storage.getFilePreview(BUCKETS.avatars, result.$id).href;
+            const url = storage.getFilePreview(avatarBucketId, result.$id).href;
             preview.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`;
         } catch (error) {
-            window.showToast('Failed to upload image', 'danger');
+            notify('Failed to upload image', 'danger');
             preview.innerHTML = '📸';
         }
     });
@@ -96,11 +98,12 @@ export function initOnboardingView() {
         dropZone.innerHTML = '<p class="meta">Uploading Reel... <span id="reel-progress">0%</span></p>';
 
         try {
-            const result = await storage.createFile(BUCKETS.avatars, ID.unique(), file);
+            const mediaBucketId = BUCKETS.REELS || BUCKETS.reels || BUCKETS.AVATARS || BUCKETS.avatars;
+            const result = await storage.createFile(mediaBucketId, ID.unique(), file);
             profileData.reelFileId = result.$id;
             dropZone.innerHTML = `<p class="meta" style="color:var(--success);">✅ Video Uploaded</p>`;
         } catch (error) {
-            window.showToast('Reel upload failed', 'danger');
+            notify('Reel upload failed', 'danger');
             dropZone.innerHTML = '<span style="font-size: 2rem;">📹</span><p class="meta">Upload Reel (Max 100MB)</p>';
         }
     });
@@ -115,22 +118,39 @@ export function initOnboardingView() {
 }
 
 function goToStep(step) {
+    const next = Math.max(1, Math.min(4, step));
     document.querySelectorAll('.ob-step').forEach(s => s.classList.add('hidden'));
-    document.getElementById(`ob-step-${step}`).classList.remove('hidden');
-    currentStep = step;
+    document.getElementById(`ob-step-${next}`)?.classList.remove('hidden');
+    currentStep = next;
 }
 
 async function handleComplete() {
     const btn = document.getElementById('ob-complete-btn');
+    if (!btn) return;
     btn.disabled = true;
     btn.textContent = 'Saving Profile...';
 
-    const result = await createCreatorProfile(profileData);
-    if (result.success) {
-        window.location.reload(); 
-    } else {
-        window.showToast(result.error, 'danger');
+    try {
+        const result = await createCreatorProfile(profileData);
+        if (result.success) {
+            notify('Profile created successfully.', 'success');
+            window.location.reload();
+            return;
+        }
+
+        notify(result.error || 'Failed to save profile.', 'danger');
+    } catch (_) {
+        notify('Failed to save profile.', 'danger');
+    } finally {
         btn.disabled = false;
         btn.textContent = 'Complete Setup ✦';
     }
+}
+
+function notify(message, type = 'info') {
+    if (typeof window.showToast === 'function') {
+        window.showToast(message, type);
+        return;
+    }
+    console[type === 'danger' ? 'error' : 'log'](message);
 }

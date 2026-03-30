@@ -12,33 +12,38 @@ export function initLoginView() {
 
     // 1. Phone OTP Step
     sendOtpBtn?.addEventListener('click', async () => {
-        const phone = document.getElementById('country-code').value + phoneInput.value;
-        if (phoneInput.value.length < 10) {
-            window.showToast('Please enter a 10-digit number', 'info');
+        const countryCode = document.getElementById('country-code');
+        const phone = String(countryCode?.value || '+91') + String(phoneInput?.value || '');
+        if (String(phoneInput?.value || '').length < 10) {
+            notify('Please enter a 10-digit number', 'info');
             return;
         }
 
         sendOtpBtn.disabled = true;
         sendOtpBtn.textContent = 'Sending...';
 
-        const result = await sendPhoneOTP(phone);
-        if (result.success) {
-            otpUserId = result?.data?.userId || result.userId || null;
-            if (!otpUserId) {
-                window.showToast('Failed to initialize OTP session. Please try again.', 'danger');
-                sendOtpBtn.disabled = false;
-                sendOtpBtn.textContent = 'Send OTP';
-                return;
+        try {
+            const result = await sendPhoneOTP(phone);
+            if (result.success) {
+                otpUserId = result?.data?.userId || result.userId || null;
+                if (!otpUserId) {
+                    notify('Failed to initialize OTP session. Please try again.', 'danger');
+                    return;
+                }
+                document.getElementById('phone-form')?.classList.add('hidden');
+                document.getElementById('otp-form')?.classList.remove('hidden');
+                const phoneDisplay = document.getElementById('otp-phone-display');
+                if (phoneDisplay) phoneDisplay.textContent = phone;
+                if (otpDigits[0]) otpDigits[0].focus();
+            } else {
+                notify(result.error || 'Unable to send OTP.', 'danger');
             }
-            document.getElementById('phone-form').classList.add('hidden');
-            document.getElementById('otp-form').classList.remove('hidden');
-            document.getElementById('otp-phone-display').textContent = phone;
-            otpDigits[0].focus();
-        } else {
-            window.showToast(result.error, 'danger');
+        } catch (_) {
+            notify('Unable to send OTP right now.', 'danger');
+        } finally {
+            sendOtpBtn.disabled = false;
+            sendOtpBtn.textContent = 'Send OTP';
         }
-        sendOtpBtn.disabled = false;
-        sendOtpBtn.textContent = 'Send OTP';
     });
 
     // 2. OTP Digits Logic
@@ -64,37 +69,68 @@ export function initLoginView() {
         const otp = Array.from(otpDigits).map(d => d.value).join('');
         if (otp.length < 6) return;
         if (!otpUserId) {
-            window.showToast('OTP session not found. Please request OTP again.', 'danger');
-            document.getElementById('phone-form').classList.remove('hidden');
-            document.getElementById('otp-form').classList.add('hidden');
+            notify('OTP session not found. Please request OTP again.', 'danger');
+            document.getElementById('phone-form')?.classList.remove('hidden');
+            document.getElementById('otp-form')?.classList.add('hidden');
             return;
         }
 
         verifyOtpBtn.disabled = true;
         verifyOtpBtn.textContent = 'Verifying...';
 
-        const result = await verifyPhoneOTP(otpUserId, otp);
-        if (result.success) {
-            window.location.reload(); // Boot sequence will handle routing
-        } else {
-            window.showToast(result.error, 'danger');
+        try {
+            const result = await verifyPhoneOTP(otpUserId, otp);
+            if (result.success) {
+                window.location.reload();
+            } else {
+                notify(result.error || 'OTP verification failed.', 'danger');
+                otpDigits.forEach(d => d.value = '');
+                if (otpDigits[0]) otpDigits[0].focus();
+            }
+        } catch (_) {
+            notify('OTP verification failed. Please retry.', 'danger');
             otpDigits.forEach(d => d.value = '');
-            otpDigits[0].focus();
+            if (otpDigits[0]) otpDigits[0].focus();
         }
-        verifyOtpBtn.disabled = false;
-        verifyOtpBtn.textContent = 'Verify';
+        finally {
+            verifyOtpBtn.disabled = false;
+            verifyOtpBtn.textContent = 'Verify';
+        }
     }
 
     verifyOtpBtn?.addEventListener('click', handleVerify);
 
     // 4. Change Number
     changeNumberBtn?.addEventListener('click', () => {
-        document.getElementById('phone-form').classList.remove('hidden');
-        document.getElementById('otp-form').classList.add('hidden');
+        document.getElementById('phone-form')?.classList.remove('hidden');
+        document.getElementById('otp-form')?.classList.add('hidden');
+        otpDigits.forEach(d => d.value = '');
+        otpUserId = null;
     });
 
     // 5. Google OAuth
-    googleBtn?.addEventListener('click', () => {
-        loginWithGoogle();
+    googleBtn?.addEventListener('click', async () => {
+        googleBtn.disabled = true;
+        googleBtn.textContent = 'Redirecting...';
+        try {
+            const result = await loginWithGoogle();
+            if (!result.success) {
+                notify(result.error || 'Google login failed.', 'danger');
+            }
+        } catch (_) {
+            notify('Google login failed.', 'danger');
+        } finally {
+            googleBtn.disabled = false;
+            googleBtn.textContent = 'Continue with Google';
+        }
     });
+}
+
+function notify(message, type = 'info') {
+    if (typeof window.showToast === 'function') {
+        window.showToast(message, type);
+        return;
+    }
+
+    console[type === 'danger' ? 'error' : 'log'](message);
 }

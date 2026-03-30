@@ -5,12 +5,15 @@ import { renderNetworkBoard } from './js/components/network.js';
 import { renderJobs } from './js/components/jobs.js';
 import { renderChatList, initChatModule } from './js/components/chat.js';
 import { renderNotifications } from './js/components/notifications.js';
+import { renderProfile } from './js/components/profile.js';
 import { initSearch } from './js/components/search.js';
 import { initSettings } from './js/components/settings.js';
 import { initToast } from './js/components/toast.js';
+import { initRouter, navigateTo, setRouteHandler } from './js/router.js';
 
 window.StorageService = StorageService;
 window.logout = logout;
+window.setView = setView;
 
 function unwrapResult(result) {
     if (result && typeof result === 'object' && 'success' in result) {
@@ -23,26 +26,7 @@ function unwrapResult(result) {
 // Consolidated View Management
 export function setView(name) {
     console.log('[KALAKAR] Switching view to:', name);
-    const views = {
-        'feed': document.querySelector('#feed-view'),
-        'jobs': document.querySelector('#jobs-view'),
-        'network': document.querySelector('#network-view'),
-        'projects': document.querySelector('#projects-view'),
-        'messages': document.querySelector('#messages-view'),
-        'notifications': document.querySelector('#notifications-view')
-    };
-
-    // Hide all views safely
-    Object.values(views).forEach(v => {
-        if (v) v.classList.add('hidden');
-    });
-
-    // Show active view
-    const activeView = views[name];
-    if (activeView) {
-        activeView.classList.remove('hidden');
-        routeToView(name);
-    }
+    navigateTo(name);
 }
 
 function routeToView(view) {
@@ -53,6 +37,7 @@ function routeToView(view) {
         if (view === 'jobs') renderJobs();
         if (view === 'messages') renderChatList();
         if (view === 'notifications') renderNotifications();
+        if (view === 'profile') renderProfile();
     } catch (e) {
         console.error('[KALAKAR] Error in routeToView for:', view, e);
     }
@@ -136,40 +121,45 @@ async function initMainApp() {
     try { initChatModule(); } catch(e) {}
     try { initSearch(); } catch(e) {}
     try { initSettings(); } catch(e) {}
+    setupDeadButtonFallbacks();
     
-    setupNavigation();
-    
-    const requestedView = window.location.hash.replace('#', '') || 'feed';
-    setView(requestedView);
+    setRouteHandler(routeToView);
+    initRouter({ defaultView: 'feed' });
 }
 
-function setupNavigation() {
-    const navLinks = document.querySelectorAll('.nav-item, .nav-links a, .mobile-nav a, [data-target]');
-    
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            let target = link.dataset.target || (link.getAttribute('href') || '').substring(1);
-            
-            // Text-based fallback for robust mapping
-            if (!target || target === '') {
-                const text = link.querySelector('span')?.textContent.trim().toLowerCase();
-                const textMap = { 'home': 'feed', 'feed': 'feed', 'network': 'network', 'jobs': 'jobs', 'messaging': 'messages', 'notifications': 'notifications' };
-                target = textMap[text] || target;
+function setupDeadButtonFallbacks() {
+    const quickActions = [
+        document.getElementById('nav-post-fab'),
+        document.getElementById('mobile-post-btn'),
+        document.getElementById('post-job-trigger')
+    ];
+
+    quickActions.forEach((action) => {
+        if (!action || action.dataset.boundFallback === '1') return;
+        action.dataset.boundFallback = '1';
+
+        action.addEventListener('click', (event) => {
+            event.preventDefault();
+            const modal = document.getElementById('post-job-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                return;
             }
 
-            const validViews = ['feed', 'network', 'jobs', 'messages', 'notifications', 'projects', 'saved', 'settings'];
-            
-            if (validViews.includes(target)) {
-                e.preventDefault();
-                console.log('[KALAKAR] Navigating to:', target);
-                window.location.hash = target;
-                setView(target);
-                
-                navLinks.forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
+            if (typeof window.showToast === 'function') {
+                window.showToast('Create post coming soon.', 'info');
             }
         });
     });
+
+    const postModal = document.getElementById('post-job-modal');
+    const closeButton = postModal?.querySelector('.close-btn');
+    if (closeButton && closeButton.dataset.boundFallback !== '1') {
+        closeButton.dataset.boundFallback = '1';
+        closeButton.addEventListener('click', () => {
+            postModal.classList.add('hidden');
+        });
+    }
 }
 
 // Global Intersections for Video Autoplay

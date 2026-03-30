@@ -3,6 +3,7 @@ import { StorageServiceInstance as StorageService } from './core.js';
 import { showToast } from './toast.js';
 
 let unsubscribeNotifications = null;
+const NOTIFICATIONS_COLLECTION = COLLECTIONS.NOTIFICATIONS || COLLECTIONS.notifications;
 
 export async function renderNotifications() {
   const container = document.querySelector('#notifications-view');
@@ -16,7 +17,7 @@ export async function renderNotifications() {
   try {
     const response = await databases.listDocuments(
       DATABASE_ID,
-      COLLECTIONS.notifications,
+      NOTIFICATIONS_COLLECTION,
       [
         Query.equal('userId', myProfile.$id),
         Query.orderDesc('createdAt'),
@@ -68,7 +69,7 @@ export async function renderNotifications() {
         for (const id of unreadIds) {
             await databases.updateDocument(
                 DATABASE_ID,
-                COLLECTIONS.notifications,
+                NOTIFICATIONS_COLLECTION,
                 id,
                 { isRead: true }
             );
@@ -89,7 +90,7 @@ export async function updateNotificationBadge() {
   try {
     const response = await databases.listDocuments(
       DATABASE_ID,
-      COLLECTIONS.notifications,
+      NOTIFICATIONS_COLLECTION,
       [
         Query.equal('userId', myProfile.$id),
         Query.equal('isRead', false),
@@ -119,7 +120,7 @@ export function setupNotificationListener() {
     if (unsubscribeNotifications) unsubscribeNotifications();
 
     unsubscribeNotifications = client.subscribe(
-        `databases.${DATABASE_ID}.collections.${COLLECTIONS.notifications}.documents`,
+        `databases.${DATABASE_ID}.collections.${NOTIFICATIONS_COLLECTION}.documents`,
         (response) => {
             if (response.events.includes('databases.*.collections.*.documents.*.create')) {
                 const notif = response.payload;
