@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --check app.js && node --check initAppwrite.js && node --check js/appwriteClient.js && node --check js/auth.js && node --check js/views/login.js && node --check js/views/loginPage.js && node --check js/views/onboarding.js && node --check js/views/onboardingPage.js && node --check js/views/stageFeed.js && node --check js/views/videoFeed.js && node --check js/views/jobBoardPage.js && node --check js/components/chat.js && node --check js/components/feed.js && node --check js/components/jobs.js && node --check js/components/kanban.js && node --check js/components/network.js && node --check js/components/notifications.js && node --check js/components/postComposer.js && node --check js/components/vouchModal.js && node --check js/config/runtimeConfig.js && node --check js/lib/appwrite.js && node --check js/services/jobsService.js && node --check js/utils/response.js"
   },
   "repository": {
     "type": "git",

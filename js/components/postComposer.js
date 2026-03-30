@@ -1,4 +1,4 @@
-import { databases, storage, ID, APPWRITE_CONFIG } from '../appwriteClient.js';
+import { databases, storage, ID, DATABASE_ID, COLLECTIONS, BUCKETS } from '../appwriteClient.js';
 import { renderStage } from './feed.js';
 import { StorageServiceInstance as StorageService } from './core.js';
 import { showToast } from './toast.js';
@@ -17,7 +17,7 @@ export function initPostComposer() {
   composerContainer.className = 'modal-overlay hidden';
   
   const avatarUrl = userProfile.avatarFileId ? 
-    storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, userProfile.avatarFileId, 100).href : 
+    storage.getFilePreview(BUCKETS.avatars, userProfile.avatarFileId, 100).href : 
     `https://i.pravatar.cc/100?u=${userProfile.$id}`;
 
   composerContainer.innerHTML = `
@@ -125,7 +125,7 @@ export function initPostComposer() {
         pct.textContent = '30%';
         progress.style.width = '30%';
         
-        const result = await storage.createFile(APPWRITE_CONFIG.buckets.avatars, ID.unique(), selectedFile);
+        const result = await storage.createFile(BUCKETS.avatars, ID.unique(), selectedFile);
         fileId = result.$id;
 
         pct.textContent = '70%';
@@ -133,8 +133,8 @@ export function initPostComposer() {
       }
 
       await databases.createDocument(
-        APPWRITE_CONFIG.databaseId,
-        APPWRITE_CONFIG.collections.posts,
+        DATABASE_ID,
+        COLLECTIONS.posts,
         ID.unique(),
         {
           authorId: userProfile.$id, // Uses the $id of the profile doc

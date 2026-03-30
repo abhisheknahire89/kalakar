@@ -1,5 +1,5 @@
 import { createCreatorProfile } from '../auth.js';
-import { storage, ID, APPWRITE_CONFIG } from '../appwriteClient.js';
+import { storage, ID, BUCKETS } from '../appwriteClient.js';
 
 let currentStep = 1;
 const profileData = {
@@ -77,9 +77,9 @@ export function initOnboardingView() {
         preview.innerHTML = '<span class="spinner"></span>';
 
         try {
-            const result = await storage.createFile(APPWRITE_CONFIG.buckets.avatars, ID.unique(), file);
+            const result = await storage.createFile(BUCKETS.avatars, ID.unique(), file);
             profileData.avatarFileId = result.$id;
-            const url = storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, result.$id).href;
+            const url = storage.getFilePreview(BUCKETS.avatars, result.$id).href;
             preview.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`;
         } catch (error) {
             window.showToast('Failed to upload image', 'danger');
@@ -96,7 +96,7 @@ export function initOnboardingView() {
         dropZone.innerHTML = '<p class="meta">Uploading Reel... <span id="reel-progress">0%</span></p>';
 
         try {
-            const result = await storage.createFile(APPWRITE_CONFIG.buckets.avatars, ID.unique(), file);
+            const result = await storage.createFile(BUCKETS.avatars, ID.unique(), file);
             profileData.reelFileId = result.$id;
             dropZone.innerHTML = `<p class="meta" style="color:var(--success);">✅ Video Uploaded</p>`;
         } catch (error) {

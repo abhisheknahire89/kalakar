@@ -23,7 +23,13 @@ export function initLoginView() {
 
         const result = await sendPhoneOTP(phone);
         if (result.success) {
-            otpUserId = result.userId;
+            otpUserId = result?.data?.userId || result.userId || null;
+            if (!otpUserId) {
+                window.showToast('Failed to initialize OTP session. Please try again.', 'danger');
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.textContent = 'Send OTP';
+                return;
+            }
             document.getElementById('phone-form').classList.add('hidden');
             document.getElementById('otp-form').classList.remove('hidden');
             document.getElementById('otp-phone-display').textContent = phone;
@@ -57,6 +63,12 @@ export function initLoginView() {
     async function handleVerify() {
         const otp = Array.from(otpDigits).map(d => d.value).join('');
         if (otp.length < 6) return;
+        if (!otpUserId) {
+            window.showToast('OTP session not found. Please request OTP again.', 'danger');
+            document.getElementById('phone-form').classList.remove('hidden');
+            document.getElementById('otp-form').classList.add('hidden');
+            return;
+        }
 
         verifyOtpBtn.disabled = true;
         verifyOtpBtn.textContent = 'Verifying...';

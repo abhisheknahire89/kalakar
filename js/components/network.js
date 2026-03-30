@@ -1,4 +1,4 @@
-import { databases, Query, APPWRITE_CONFIG, ID, storage } from '../appwriteClient.js';
+import { databases, Query, ID, storage, DATABASE_ID, COLLECTIONS, BUCKETS } from '../appwriteClient.js';
 import { StorageServiceInstance as StorageService } from './core.js';
 import { openChat } from './chat.js';
 import { showToast } from './toast.js';
@@ -34,8 +34,8 @@ export async function renderNetworkBoard(departmentFilter = 'All', searchQuery =
     }
 
     const response = await databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.creators,
+      DATABASE_ID,
+      COLLECTIONS.creators,
       queries
     );
 
@@ -55,7 +55,7 @@ export async function renderNetworkBoard(departmentFilter = 'All', searchQuery =
       card.style.cursor = 'pointer';
 
       const avatar = creator.avatarFileId ? 
-        storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, creator.avatarFileId, 100).href : 
+        storage.getFilePreview(BUCKETS.avatars, creator.avatarFileId, 100).href : 
         `https://i.pravatar.cc/100?u=${creator.$id}`;
 
       card.innerHTML = `
@@ -94,8 +94,8 @@ export async function openTalentProfile(creatorId) {
 
   try {
     const creator = await databases.getDocument(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.creators,
+      DATABASE_ID,
+      COLLECTIONS.creators,
       creatorId
     );
 
@@ -105,7 +105,7 @@ export async function openTalentProfile(creatorId) {
     
     const avatarContainer = document.getElementById('tp-avatar-container');
     const avatar = creator.avatarFileId ? 
-        storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, creator.avatarFileId, 200).href : 
+        storage.getFilePreview(BUCKETS.avatars, creator.avatarFileId, 200).href : 
         `https://i.pravatar.cc/200?u=${creator.$id}`;
     avatarContainer.innerHTML = `<img src="${avatar}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--surface-2);">`;
 
@@ -134,8 +134,8 @@ export async function openTalentProfile(creatorId) {
     creditsContainer.innerHTML = '<div class="skeleton" style="height: 100px; width: 100%;"></div>';
     
     const creditsResponse = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId,
-        APPWRITE_CONFIG.collections.credits,
+        DATABASE_ID,
+        COLLECTIONS.credits,
         [Query.equal('talentId', creatorId), Query.orderDesc('year')]
     );
 

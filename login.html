@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kalakar Login</title>
+    <link rel="stylesheet" href="./styles/login.css" />
+  </head>
+  <body>
+    <main class="auth-shell">
+      <section class="auth-card" aria-labelledby="auth-title">
+        <h1 id="auth-title">Welcome to Kalakar</h1>
+        <p class="subtitle">Login with phone OTP or continue with Google</p>
+
+        <form id="phone-form" novalidate>
+          <label for="phone-input">Phone Number (E.164 format)</label>
+          <input
+            id="phone-input"
+            name="phone"
+            type="tel"
+            inputmode="tel"
+            autocomplete="tel"
+            placeholder="+919876543210"
+            aria-describedby="phone-help"
+            required
+          />
+          <p id="phone-help" class="helper">Example: +919876543210</p>
+          <button id="send-otp-btn" type="submit">Send OTP</button>
+        </form>
+
+        <form id="otp-form" class="hidden" novalidate>
+          <label for="otp-1">Enter 6-digit OTP</label>
+          <div class="otp-group" role="group" aria-label="OTP input">
+            <input id="otp-1" class="otp-input" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" />
+            <input id="otp-2" class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+            <input id="otp-3" class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+            <input id="otp-4" class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+            <input id="otp-5" class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+            <input id="otp-6" class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+          </div>
+          <div class="otp-actions">
+            <button id="verify-otp-btn" type="submit">Verify OTP</button>
+            <button id="change-phone-btn" type="button" class="ghost">Change Number</button>
+          </div>
+        </form>
+
+        <div class="divider" aria-hidden="true">or</div>
+
+        <button id="google-btn" type="button" class="google-btn" aria-label="Continue with Google">
+          Continue with Google
+        </button>
+
+        <p id="auth-error" class="error hidden" role="alert"></p>
+        <p id="auth-success" class="success hidden" role="status"></p>
+      </section>
+    </main>
+
+    <script type="module" src="./js/views/loginPage.js"></script>
+  </body>
+</html>

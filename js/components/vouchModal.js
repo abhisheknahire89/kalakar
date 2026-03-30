@@ -1,4 +1,4 @@
-import { databases, APPWRITE_CONFIG, ID, Query } from '../appwriteClient.js';
+import { databases, ID, Query, DATABASE_ID, COLLECTIONS } from '../appwriteClient.js';
 import { StorageServiceInstance as StorageService } from './core.js';
 import { showToast } from './toast.js';
 
@@ -67,8 +67,8 @@ export function initVouchModal() {
     try {
         // 1. Create Vouch Document
         await databases.createDocument(
-            APPWRITE_CONFIG.databaseId,
-            APPWRITE_CONFIG.collections.vouches,
+            DATABASE_ID,
+            COLLECTIONS.vouches,
             ID.unique(),
             {
                 vouchId: profile.$id, // The one giving the vouch
@@ -81,14 +81,14 @@ export function initVouchModal() {
 
         // 2. Increment Vouch Count on Target Profile
         const targetDoc = await databases.getDocument(
-            APPWRITE_CONFIG.databaseId,
-            APPWRITE_CONFIG.collections.creators,
+            DATABASE_ID,
+            COLLECTIONS.creators,
             targetId
         );
 
         await databases.updateDocument(
-            APPWRITE_CONFIG.databaseId,
-            APPWRITE_CONFIG.collections.creators,
+            DATABASE_ID,
+            COLLECTIONS.creators,
             targetId,
             { 
               vouchCount: (targetDoc.vouchCount || 0) + 1,

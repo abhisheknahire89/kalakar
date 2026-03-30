@@ -1,4 +1,4 @@
-import { databases, Query, APPWRITE_CONFIG, ID } from '../appwriteClient.js';
+import { databases, Query, ID, DATABASE_ID, COLLECTIONS } from '../appwriteClient.js';
 import { StorageServiceInstance as StorageService } from './core.js';
 import { createKanbanBoard } from './kanban.js';
 import { showToast } from './toast.js';
@@ -30,8 +30,8 @@ export async function renderJobs(filter = 'all') {
     }
 
     const response = await databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.jobs,
+      DATABASE_ID,
+      COLLECTIONS.jobs,
       queries
     );
 
@@ -103,14 +103,14 @@ function createJobCard(job, isFeatured) {
 export async function viewApplicants(jobId) {
   try {
     const job = await databases.getDocument(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.jobs,
+      DATABASE_ID,
+      COLLECTIONS.jobs,
       jobId
     );
 
     const response = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId,
-        APPWRITE_CONFIG.collections.applications,
+        DATABASE_ID,
+        COLLECTIONS.applications,
         [Query.equal('jobId', jobId)]
     );
 
@@ -127,8 +127,8 @@ export async function viewApplicants(jobId) {
       onStatusChange: async (applicationId, newStatus) => {
         try {
             await databases.updateDocument(
-                APPWRITE_CONFIG.databaseId,
-                APPWRITE_CONFIG.collections.applications,
+                DATABASE_ID,
+                COLLECTIONS.applications,
                 applicationId,
                 { status: newStatus }
             );
@@ -151,8 +151,8 @@ async function handleApply(jobId) {
     const profile = StorageService.get('kalakar_user_profile');
     try {
         await databases.createDocument(
-            APPWRITE_CONFIG.databaseId,
-            APPWRITE_CONFIG.collections.applications,
+            DATABASE_ID,
+            COLLECTIONS.applications,
             ID.unique(),
             {
                 jobId: jobId,
@@ -178,8 +178,8 @@ postJobForm?.addEventListener('submit', async (e) => {
     
     try {
         await databases.createDocument(
-            APPWRITE_CONFIG.databaseId,
-            APPWRITE_CONFIG.collections.jobs,
+            DATABASE_ID,
+            COLLECTIONS.jobs,
             ID.unique(),
             {
                 title: document.querySelector('#job-title').value,

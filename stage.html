@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kalakar Stage Feed</title>
+    <link rel="stylesheet" href="./styles/stage.css" />
+  </head>
+  <body>
+    <main class="feed-shell">
+      <header class="feed-header">
+        <h1>Stage</h1>
+        <p>Discover creators across Maharashtra</p>
+      </header>
+
+      <section id="feed" class="feed" aria-live="polite"></section>
+
+      <div id="feed-loader" class="loader">Loading posts...</div>
+      <p id="feed-error" class="error hidden" role="alert"></p>
+    </main>
+
+    <script type="module" src="./js/views/stageFeed.js"></script>
+  </body>
+</html>

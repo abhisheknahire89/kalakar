@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kalakar Jobs</title>
+
+    <meta name="kalakar-endpoint" content="https://fra.cloud.appwrite.io/v1" />
+    <meta name="kalakar-project-id" content="69c8ee1b0037e381d046" />
+    <meta name="kalakar-database-id" content="kalakar_db" />
+    <meta name="kalakar-collection-jobs" content="jobs" />
+    <meta name="kalakar-collection-applications" content="applications" />
+
+    <link rel="stylesheet" href="./styles/job-board.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Kalakar Jobs</h1>
+          <p>Cast faster. Apply smarter.</p>
+        </div>
+        <button id="refresh-btn" class="ghost" type="button">Refresh</button>
+      </header>
+
+      <section class="panel">
+        <h2>Post a Job</h2>
+        <form id="job-form" class="job-form" novalidate>
+          <input name="title" type="text" placeholder="Job title" required />
+          <textarea name="description" rows="3" placeholder="Role description" required></textarea>
+          <div class="grid-2">
+            <input name="city" type="text" placeholder="City (Mumbai, Pune...)" required />
+            <input name="roleType" type="text" placeholder="Role type (Actor, DOP...)" required />
+          </div>
+          <select name="experienceLevel" required>
+            <option value="">Select experience level</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+          <button id="post-job-btn" type="submit">Post Job</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Open Roles</h2>
+        <div id="list-loading" class="state">Loading jobs...</div>
+        <div id="list-error" class="state error hidden" role="alert"></div>
+        <div id="empty-state" class="state hidden">No jobs posted yet.</div>
+        <div id="jobs-list" class="jobs-list"></div>
+        <button id="load-more-btn" type="button" class="ghost hidden">Load More</button>
+      </section>
+    </main>
+
+    <script type="module" src="./js/views/jobBoardPage.js"></script>
+  </body>
+</html>

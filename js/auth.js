@@ -1,120 +1,143 @@
-import { account, databases, ID, Query, APPWRITE_CONFIG } from './appwriteClient.js';
+import { account, databases, ID, DATABASE_ID, COLLECTIONS } from './appwriteClient.js';
 
-// ═══════════════════════════════════
-// SESSION MANAGEMENT
-// ═══════════════════════════════════
+const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
+const OTP_REGEX = /^\d{6}$/;
 
-/**
- * Check if user has an active session
- */
-export async function getCurrentUser() {
-  try {
-    const user = await account.get();
-    return user;
-  } catch (error) {
-    return null;
+const buildSuccess = (data) => ({ success: true, data });
+const buildError = (error) => ({ success: false, error });
+
+function mapAuthError(error) {
+  const code = Number(error?.code ?? error?.response?.status ?? 0);
+  const type = String(error?.type ?? '').toLowerCase();
+  const message = String(error?.message ?? '').toLowerCase();
+
+  if (code === 429 || type.includes('rate_limit') || message.includes('too many')) {
+    return 'Rate limit exceeded. Please wait and try again.';
   }
+
+  if (code === 401 && (type.includes('token_expired') || message.includes('expired'))) {
+    return 'OTP expired. Please request a new code.';
+  }
+
+  if (code === 401 && (type.includes('invalid') || message.includes('invalid'))) {
+    return 'Invalid OTP. Please try again.';
+  }
+
+  if (code === 401 || code === 403) {
+    return 'Authentication failed. Please try again.';
+  }
+
+  return error?.message || 'Something went wrong. Please try again.';
 }
 
-/**
- * Check if user has a creator profile (onboarded)
- */
-export async function getCreatorProfile(userId) {
-  try {
-    const result = await databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.creators,
-      [Query.equal('userId', userId), Query.limit(1)]
-    );
-    return result.documents.length > 0 ? result.documents[0] : null;
-  } catch (error) {
-    console.error('Failed to fetch profile:', error);
-    return null;
-  }
+function normalizePhone(phone) {
+  if (typeof phone !== 'string') return '';
+  return phone.trim().replace(/\s+/g, '');
 }
-
-/**
- * Logout
- */
-export async function logout() {
-  try {
-    await account.deleteSession('current');
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-// ═══════════════════════════════════
-// PHONE OTP AUTHENTICATION
-// ═══════════════════════════════════
 
 export async function sendPhoneOTP(phone) {
   try {
-    const token = await account.createPhoneToken(ID.unique(), phone);
-    return { success: true, userId: token.userId };
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!normalizedPhone) {
+      return buildError('Phone number is required.');
+    }
+
+    if (!PHONE_REGEX.test(normalizedPhone)) {
+      return buildError('Phone number must be in E.164 format (e.g. +919876543210).');
+    }
+
+    const token = await account.createPhoneToken(ID.unique(), normalizedPhone);
+
+    return buildSuccess({
+      userId: token?.userId || null,
+      phone: normalizedPhone
+    });
   } catch (error) {
-    console.error('Send OTP error:', error);
-    if (error.code === 429) return { success: false, error: 'Too many attempts. Wait 60s.' };
-    return { success: false, error: 'Failed to send OTP. Check number.' };
+    return buildError(mapAuthError(error));
   }
 }
 
 export async function verifyPhoneOTP(userId, otp) {
   try {
-    const session = await account.createSession(userId, otp);
-    return { success: true, session };
+    const normalizedUserId = typeof userId === 'string' ? userId.trim() : '';
+    const normalizedOtp = typeof otp === 'string' ? otp.trim() : '';
+
+    if (!normalizedUserId) {
+      return buildError('User ID is required.');
+    }
+
+    if (!OTP_REGEX.test(normalizedOtp)) {
+      return buildError('OTP must be 6 digits.');
+    }
+
+    const session = await account.createSession(normalizedUserId, normalizedOtp);
+
+    return buildSuccess({
+      sessionId: session?.$id || null,
+      userId: session?.userId || normalizedUserId,
+      expire: session?.expire || null
+    });
   } catch (error) {
-    console.error('Verify OTP error:', error);
-    if (error.code === 401) return { success: false, error: 'Invalid OTP code.' };
-    return { success: false, error: 'Verification failed.' };
+    return buildError(mapAuthError(error));
   }
 }
 
-// ═══════════════════════════════════
-// GOOGLE OAuth 2.0
-// ═══════════════════════════════════
-
-export function loginWithGoogle() {
+export async function loginWithGoogle() {
   try {
-    account.createOAuth2Session(
-      'google',
-      window.location.origin + '/#stage',
-      window.location.origin + '/#login',
-      ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
-    );
+    const successUrl = `${window.location.origin}${window.location.pathname}`;
+    const failureUrl = `${window.location.origin}${window.location.pathname}?authError=google`;
+
+    await account.createOAuth2Session('google', successUrl, failureUrl);
+
+    return buildSuccess({ redirecting: true, provider: 'google' });
   } catch (error) {
-    console.error('Google login error:', error);
+    return buildError(mapAuthError(error));
   }
 }
 
-// ═══════════════════════════════════
-// ONBOARDING
-// ═══════════════════════════════════
-
-export async function createCreatorProfile(profileData) {
+export async function getCurrentUser() {
   try {
     const user = await account.get();
-    const profile = await databases.createDocument(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.creators,
-      ID.unique(),
-      {
-        userId: user.$id,
-        name: profileData.name || user.name || '',
-        role: profileData.primaryCraft || 'actor',
-        city: profileData.city || 'Mumbai',
-        verified: false,
-        reliability: 80,
-        tags: profileData.tags || [],
-        credits: [],
-        vouchedBy: 'System',
-        createdAt: new Date().toISOString()
-      }
-    );
-    return { success: true, profile };
+    return buildSuccess(user);
   } catch (error) {
-    console.error('Profile creation error:', error);
-    return { success: false, error: 'Failed to save profile.' };
+    return buildError(mapAuthError(error));
+  }
+}
+
+export async function logout() {
+  try {
+    await account.deleteSession('current');
+    return buildSuccess({ loggedOut: true });
+  } catch (error) {
+    return buildError(mapAuthError(error));
+  }
+}
+
+// Backward-compatible onboarding helper used by legacy views
+export async function createCreatorProfile(profileData = {}) {
+  try {
+    const user = await account.get();
+    const databaseId = DATABASE_ID;
+    const creatorsCollection = COLLECTIONS.CREATORS || COLLECTIONS.creators;
+
+    if (!databaseId || !creatorsCollection) {
+      return buildError('Creator profile configuration is missing.');
+    }
+
+    const doc = await databases.createDocument(databaseId, creatorsCollection, ID.unique(), {
+      name: String(profileData.name || user.name || '').trim(),
+      username: String(profileData.username || `user_${user.$id?.slice(-6) || 'creator'}`).trim(),
+      bio: String(profileData.bio || '').trim(),
+      avatarFileId: String(profileData.avatarFileId || '').trim(),
+      city: String(profileData.city || 'Mumbai').trim(),
+      language: String(profileData.language || 'Marathi').trim(),
+      isVerified: false,
+      createdAt: new Date().toISOString()
+    });
+
+    return buildSuccess({ profile: doc });
+  } catch (error) {
+    return buildError(mapAuthError(error));
   }
 }

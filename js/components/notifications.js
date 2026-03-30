@@ -1,4 +1,4 @@
-import { databases, Query, APPWRITE_CONFIG, client } from '../appwriteClient.js';
+import { databases, Query, client, DATABASE_ID, COLLECTIONS } from '../appwriteClient.js';
 import { StorageServiceInstance as StorageService } from './core.js';
 import { showToast } from './toast.js';
 
@@ -15,8 +15,8 @@ export async function renderNotifications() {
 
   try {
     const response = await databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.notifications,
+      DATABASE_ID,
+      COLLECTIONS.notifications,
       [
         Query.equal('userId', myProfile.$id),
         Query.orderDesc('createdAt'),
@@ -67,8 +67,8 @@ export async function renderNotifications() {
     if (unreadIds.length > 0) {
         for (const id of unreadIds) {
             await databases.updateDocument(
-                APPWRITE_CONFIG.databaseId,
-                APPWRITE_CONFIG.collections.notifications,
+                DATABASE_ID,
+                COLLECTIONS.notifications,
                 id,
                 { isRead: true }
             );
@@ -88,8 +88,8 @@ export async function updateNotificationBadge() {
 
   try {
     const response = await databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.notifications,
+      DATABASE_ID,
+      COLLECTIONS.notifications,
       [
         Query.equal('userId', myProfile.$id),
         Query.equal('isRead', false),
@@ -119,7 +119,7 @@ export function setupNotificationListener() {
     if (unsubscribeNotifications) unsubscribeNotifications();
 
     unsubscribeNotifications = client.subscribe(
-        `databases.${APPWRITE_CONFIG.databaseId}.collections.${APPWRITE_CONFIG.collections.notifications}.documents`,
+        `databases.${DATABASE_ID}.collections.${COLLECTIONS.notifications}.documents`,
         (response) => {
             if (response.events.includes('databases.*.collections.*.documents.*.create')) {
                 const notif = response.payload;

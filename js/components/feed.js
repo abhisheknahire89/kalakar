@@ -1,4 +1,4 @@
-import { databases, storage, APPWRITE_CONFIG, Query, ID } from '../appwriteClient.js';
+import { databases, storage, Query, ID, DATABASE_ID, COLLECTIONS, BUCKETS } from '../appwriteClient.js';
 import { createVideoPlayer } from './videoPlayer.js';
 
 let isLoading = false;
@@ -51,10 +51,13 @@ async function renderPosts(filterTopic, append = false) {
       Query.limit(10),
       Query.orderDesc('createdAt')
     ];
+    if (append && lastPostId) {
+      queries.push(Query.cursorAfter(lastPostId));
+    }
 
     const response = await databases.listDocuments(
-      APPWRITE_CONFIG.databaseId,
-      APPWRITE_CONFIG.collections.posts,
+      DATABASE_ID,
+      COLLECTIONS.posts,
       queries
     );
 
@@ -72,8 +75,8 @@ async function renderPosts(filterTopic, append = false) {
     for (const post of response.documents) {
       try {
         const author = await databases.getDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.creators,
+          DATABASE_ID,
+          COLLECTIONS.creators,
           post.authorId
         );
 
@@ -81,7 +84,7 @@ async function renderPosts(filterTopic, append = false) {
         greenroomFeed.appendChild(postCard);
 
         if (post.videoFileId) {
-          const videoUrl = storage.getFileView(APPWRITE_CONFIG.buckets.avatars, post.videoFileId).href;
+          const videoUrl = storage.getFileView(BUCKETS.avatars, post.videoFileId).href;
           createVideoPlayer(postCard.querySelector('.post-video-container'), {
             videoUrl: videoUrl,
             aspectRatio: '16/9'

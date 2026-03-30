@@ -1,4 +1,4 @@
-import { databases, APPWRITE_CONFIG, storage } from '../appwriteClient.js';
+import { databases, storage, DATABASE_ID, COLLECTIONS, BUCKETS } from '../appwriteClient.js';
 import { openChat } from './chat.js';
 
 export function createKanbanBoard(containerEl, { jobId, columns, onStatusChange }) {
@@ -66,8 +66,8 @@ export function createKanbanBoard(containerEl, { jobId, columns, onStatusChange 
     for (const app of applications) {
       try {
         const talent = await databases.getDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.creators,
+          DATABASE_ID,
+          COLLECTIONS.creators,
           app.talentId
         );
 
@@ -101,7 +101,7 @@ export function createKanbanBoard(containerEl, { jobId, columns, onStatusChange 
     card.style.border = '1px solid var(--line)';
 
     const avatar = talent.avatarFileId ? 
-        storage.getFilePreview(APPWRITE_CONFIG.buckets.avatars, talent.avatarFileId, 80).href : 
+        storage.getFilePreview(BUCKETS.avatars, talent.avatarFileId, 80).href : 
         `https://i.pravatar.cc/80?u=${talent.$id}`;
 
     card.innerHTML = `

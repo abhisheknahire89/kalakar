@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kalakar Onboarding</title>
+    <link rel="stylesheet" href="./styles/onboarding.css" />
+  </head>
+  <body>
+    <main class="wizard-shell">
+      <section class="wizard-card" aria-labelledby="wizard-title">
+        <h1 id="wizard-title">Complete Your Profile</h1>
+        <p class="subtitle">4 quick steps to start discovering and getting hired.</p>
+
+        <div class="step-indicator" aria-label="Progress">
+          <span data-step="1" class="active">1</span>
+          <span data-step="2">2</span>
+          <span data-step="3">3</span>
+          <span data-step="4">4</span>
+        </div>
+
+        <form id="onboarding-form" novalidate>
+          <section class="step active" data-step-content="1">
+            <h2>Select Role</h2>
+            <div class="role-grid">
+              <label><input type="radio" name="role" value="Actor" checked />Actor</label>
+              <label><input type="radio" name="role" value="Director" />Director</label>
+              <label><input type="radio" name="role" value="Writer" />Writer</label>
+              <label><input type="radio" name="role" value="Editor" />Editor</label>
+              <label><input type="radio" name="role" value="DOP" />DOP</label>
+              <label><input type="radio" name="role" value="Producer" />Producer</label>
+            </div>
+          </section>
+
+          <section class="step" data-step-content="2">
+            <h2>Profile Info</h2>
+            <label for="name">Full Name</label>
+            <input id="name" name="name" type="text" required />
+
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" required />
+
+            <label for="city">City</label>
+            <select id="city" name="city" required>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Pune">Pune</option>
+              <option value="Nashik">Nashik</option>
+              <option value="Nagpur">Nagpur</option>
+              <option value="Kolhapur">Kolhapur</option>
+              <option value="Aurangabad">Aurangabad</option>
+            </select>
+
+            <label for="language">Primary Language</label>
+            <select id="language" name="language" required>
+              <option value="Marathi">Marathi</option>
+              <option value="Hindi">Hindi</option>
+              <option value="Marathi + Hindi">Marathi + Hindi</option>
+              <option value="English">English</option>
+            </select>
+          </section>
+
+          <section class="step" data-step-content="3">
+            <h2>Experience</h2>
+            <label for="experience">Experience Level</label>
+            <select id="experience" name="experience" required>
+              <option value="Beginner">Beginner (0-1 years)</option>
+              <option value="Intermediate">Intermediate (2-5 years)</option>
+              <option value="Advanced">Advanced (6+ years)</option>
+            </select>
+
+            <label for="bio">Short Bio</label>
+            <textarea id="bio" name="bio" rows="4" maxlength="500" placeholder="Tell us about your work"></textarea>
+          </section>
+
+          <section class="step" data-step-content="4">
+            <h2>Upload Media</h2>
+            <label for="avatar">Profile Photo</label>
+            <input id="avatar" name="avatar" type="file" accept="image/*" />
+
+            <label for="media">Showreel / Intro Clip</label>
+            <input id="media" name="media" type="file" accept="video/*" />
+            <p class="helper">Optional. Max file size depends on Appwrite bucket limits.</p>
+          </section>
+
+          <div class="actions">
+            <button type="button" id="prev-btn" class="ghost">Back</button>
+            <button type="button" id="next-btn">Next</button>
+            <button type="submit" id="submit-btn" class="hidden">Submit</button>
+          </div>
+        </form>
+
+        <p id="wizard-error" class="error hidden" role="alert"></p>
+        <p id="wizard-success" class="success hidden" role="status"></p>
+      </section>
+    </main>
+
+    <script type="module" src="./js/views/onboardingPage.js"></script>
+  </body>
+</html>
