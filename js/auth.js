@@ -1,4 +1,5 @@
 import { account, databases, ID, DATABASE_ID, COLLECTIONS } from './appwriteClient.js';
+import { Query } from './appwriteClient.js';
 
 const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
 const OTP_REGEX = /^\d{6}$/;
@@ -100,6 +101,34 @@ export async function getCurrentUser() {
   try {
     const user = await account.get();
     return buildSuccess(user);
+  } catch (error) {
+    return buildError(mapAuthError(error));
+  }
+}
+
+export async function getCreatorProfile() {
+  try {
+    const databaseId = DATABASE_ID;
+    const creatorsCollection = COLLECTIONS.CREATORS || COLLECTIONS.creators;
+
+    if (!databaseId || !creatorsCollection) {
+      return buildError('Creator profile configuration is missing.');
+    }
+
+    const response = await databases.listDocuments(databaseId, creatorsCollection, [
+      Query.orderDesc('$createdAt'),
+      Query.limit(1)
+    ]);
+
+    const profile = Array.isArray(response?.documents) && response.documents.length > 0
+      ? response.documents[0]
+      : null;
+
+    if (!profile) {
+      return buildError('Creator profile not found.');
+    }
+
+    return buildSuccess(profile);
   } catch (error) {
     return buildError(mapAuthError(error));
   }

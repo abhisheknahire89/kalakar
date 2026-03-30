@@ -12,6 +12,14 @@ import { initToast } from './js/components/toast.js';
 window.StorageService = StorageService;
 window.logout = logout;
 
+function unwrapResult(result) {
+    if (result && typeof result === 'object' && 'success' in result) {
+        return result.success ? (result.data ?? null) : null;
+    }
+
+    return result ?? null;
+}
+
 // Consolidated View Management
 export function setView(name) {
     console.log('[KALAKAR] Switching view to:', name);
@@ -64,7 +72,7 @@ async function boot() {
             }
         }, 5000);
 
-        const user = await getCurrentUser().catch(() => null);
+        const user = unwrapResult(await getCurrentUser().catch(() => null));
         console.log('[KALAKAR] User found:', user?.$id);
 
         if (splash) splash.style.display = 'none';
@@ -74,7 +82,7 @@ async function boot() {
             return;
         }
 
-        const profile = await getCreatorProfile(user.$id).catch(() => null);
+        const profile = unwrapResult(await getCreatorProfile(user.$id).catch(() => null));
         console.log('[KALAKAR] Profile found:', profile?.$id);
         
         if (!profile) {
@@ -87,26 +95,42 @@ async function boot() {
         initMainApp();
     } catch (e) {
         console.error('[KALAKAR] Boot crash:', e);
-        document.getElementById('splash-screen').style.display = 'none';
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.style.display = 'none';
     }
 }
 
 function showAuthScreen() {
-    document.getElementById('auth-screen').style.display = 'flex';
-    document.getElementById('app-shell').style.display = 'none';
+    const authScreen = document.getElementById('auth-screen');
+    const appShell = document.getElementById('app-shell') || document.querySelector('.app-shell');
+    const onboardingWizard = document.getElementById('onboarding-wizard');
+
+    if (authScreen) authScreen.style.display = 'flex';
+    if (appShell) appShell.style.display = 'none';
+    if (onboardingWizard) onboardingWizard.classList.add('hidden');
     import('./js/views/login.js').then(m => m.initLoginView()).catch(console.error);
 }
 
 function showOnboardingWizard() {
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('onboarding-wizard').classList.remove('hidden');
+    const authScreen = document.getElementById('auth-screen');
+    const appShell = document.getElementById('app-shell') || document.querySelector('.app-shell');
+    const onboardingWizard = document.getElementById('onboarding-wizard');
+
+    if (authScreen) authScreen.style.display = 'none';
+    if (appShell) appShell.style.display = 'none';
+    if (onboardingWizard) onboardingWizard.classList.remove('hidden');
     import('./js/views/onboarding.js').then(m => m.initOnboardingView()).catch(console.error);
 }
 
 async function initMainApp() {
     console.log('[KALAKAR] Main App Initialization Started...');
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app-shell').style.display = 'flex';
+    const authScreen = document.getElementById('auth-screen');
+    const appShell = document.getElementById('app-shell') || document.querySelector('.app-shell');
+    const onboardingWizard = document.getElementById('onboarding-wizard');
+
+    if (authScreen) authScreen.style.display = 'none';
+    if (appShell) appShell.style.display = 'flex';
+    if (onboardingWizard) onboardingWizard.classList.add('hidden');
     
     // Non-blocking module init
     try { initChatModule(); } catch(e) {}
