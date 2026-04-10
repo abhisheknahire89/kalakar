@@ -1,177 +1,164 @@
-import { StorageServiceInstance as StorageService, setLanguage } from './js/components/core.js';
-import { getCurrentUser, getCreatorProfile, logout } from './js/auth.js';
+import { StorageServiceInstance as StorageService } from './js/components/core.js';
+import { getCurrentUser, getCreatorProfile, logout, consumeMagicLinkSession } from './js/auth.js';
 import { renderStage } from './js/components/feed.js';
 import { renderNetworkBoard } from './js/components/network.js';
-import { renderJobs } from './js/components/jobs.js';
 import { renderChatList, initChatModule } from './js/components/chat.js';
-import { renderNotifications } from './js/components/notifications.js';
+import { renderNotifications, updateNotificationBadge } from './js/components/notifications.js';
 import { renderProfile } from './js/components/profile.js';
-import { initSearch } from './js/components/search.js';
-import { initSettings } from './js/components/settings.js';
-import { initToast } from './js/components/toast.js';
+import { openPostComposer } from './js/components/postComposer.js';
+import { initToast, showToast } from './js/components/toast.js';
 import { initRouter, navigateTo, setRouteHandler } from './js/router.js';
+import { getFilePreviewUrl, BUCKETS } from './js/appwriteClient.js';
 
-window.StorageService = StorageService;
+const ROUTE_RENDERERS = {
+  feed: () => renderStage(),
+  explore: () => renderNetworkBoard(),
+  'deal-room': () => renderChatList(),
+  notifications: () => renderNotifications(),
+  profile: () => renderProfile()
+};
+
+let shellBound = false;
+
 window.logout = logout;
-window.setView = setView;
+window.setView = navigateTo;
 
-function unwrapResult(result) {
-    if (result && typeof result === 'object' && 'success' in result) {
-        return result.success ? (result.data ?? null) : null;
-    }
-
-    return result ?? null;
+function toggleVisibility(element, visible, displayValue = 'block') {
+  if (!element) return;
+  element.classList.toggle('hidden', !visible);
+  element.style.display = visible ? displayValue : 'none';
 }
 
-// Consolidated View Management
-export function setView(name) {
-    console.log('[KALAKAR] Switching view to:', name);
-    navigateTo(name);
+function hydrateShell(profile) {
+  StorageService.set(StorageService.KEYS.USER, profile.userId || profile.$id);
+  StorageService.set('kalakar_user_profile', profile);
+
+  document.querySelectorAll('.profile-name, .sidebar-user-info h3').forEach((node) => {
+    node.textContent = profile.name || 'Kalakar Creator';
+  });
+  document.querySelectorAll('.profile-headline, .sidebar-user-info p, .me-label').forEach((node) => {
+    if (node.classList.contains('me-label')) {
+      node.textContent = 'Profile';
+      return;
+    }
+    node.textContent = `${profile.primaryCraft || profile.role || 'Creator'} · ${profile.city || 'India'}`;
+  });
+  document.querySelectorAll('.profile-avatar-main, .user-avatar, .user-avatar-large').forEach((image) => {
+    image.src = profile.avatarFileId
+      ? getFilePreviewUrl(BUCKETS.AVATARS || BUCKETS.avatars, profile.avatarFileId)
+      : `https://i.pravatar.cc/200?u=${encodeURIComponent(profile.$id || profile.userId || 'kalakar')}`;
+  });
 }
 
-function routeToView(view) {
-    console.log('[KALAKAR] Routing to view component:', view);
-    try {
-        if (view === 'feed') renderStage();
-        if (view === 'network') renderNetworkBoard();
-        if (view === 'jobs') renderJobs();
-        if (view === 'messages') renderChatList();
-        if (view === 'notifications') renderNotifications();
-        if (view === 'profile') renderProfile();
-    } catch (e) {
-        console.error('[KALAKAR] Error in routeToView for:', view, e);
-    }
+function bindShellActions() {
+  if (shellBound) return;
+  shellBound = true;
+
+  const openComposer = (event) => {
+    event?.preventDefault?.();
+    openPostComposer();
+  };
+
+  ['nav-post-fab', 'mobile-post-btn', 'open-upload-btn-mobile', 'feed-compose-card', 'feed-compose-inline'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('click', openComposer);
+  });
+
+  document.getElementById('msg-trigger')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    navigateTo('deal-room');
+  });
+
+  document.getElementById('mobile-msg-trigger')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    navigateTo('deal-room');
+  });
+
+  document.getElementById('sidebar-trigger')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    navigateTo('profile');
+  });
+
+  document.getElementById('close-sidebar')?.addEventListener('click', () => {
+    document.getElementById('sidebar-drawer')?.classList.add('hidden');
+  });
+
+  document.querySelector('#settings-modal .demo-list-item:last-child')?.addEventListener('click', async () => {
+    await logout();
+    window.location.hash = '';
+    window.location.reload();
+  });
 }
 
-async function boot() {
-    console.log('[KALAKAR] Booting application...');
-    try {
-        initToast();
-        const splash = document.getElementById('splash-screen');
-        
-        // Final splash safety
-        setTimeout(() => {
-            if (splash && splash.style.display !== 'none') {
-                splash.style.display = 'none';
-                console.log('[KALAKAR] Splash hard-hide triggered');
-            }
-        }, 5000);
+async function renderRoute(viewName) {
+  const renderer = ROUTE_RENDERERS[viewName] || ROUTE_RENDERERS.feed;
+  await renderer();
+}
 
-        const user = unwrapResult(await getCurrentUser().catch(() => null));
-        console.log('[KALAKAR] User found:', user?.$id);
+async function initMainApp(profile) {
+  const authScreen = document.getElementById('auth-screen');
+  const onboardingWizard = document.getElementById('onboarding-wizard');
+  const appShell = document.getElementById('app-shell');
 
-        if (splash) splash.style.display = 'none';
+  toggleVisibility(authScreen, false, 'flex');
+  toggleVisibility(onboardingWizard, false, 'flex');
+  toggleVisibility(appShell, true, 'grid');
 
-        if (!user) {
-            showAuthScreen();
-            return;
-        }
-
-        const profile = unwrapResult(await getCreatorProfile(user.$id).catch(() => null));
-        console.log('[KALAKAR] Profile found:', profile?.$id);
-        
-        if (!profile) {
-            showOnboardingWizard();
-            return;
-        }
-
-        StorageService.set(StorageService.KEYS.USER, user.$id);
-        StorageService.set('kalakar_user_profile', profile);
-        initMainApp();
-    } catch (e) {
-        console.error('[KALAKAR] Boot crash:', e);
-        const splash = document.getElementById('splash-screen');
-        if (splash) splash.style.display = 'none';
-    }
+  hydrateShell(profile);
+  initChatModule();
+  bindShellActions();
+  setRouteHandler(renderRoute);
+  initRouter({ defaultView: 'feed' });
+  await updateNotificationBadge();
 }
 
 function showAuthScreen() {
-    const authScreen = document.getElementById('auth-screen');
-    const appShell = document.getElementById('app-shell') || document.querySelector('.app-shell');
-    const onboardingWizard = document.getElementById('onboarding-wizard');
-
-    if (authScreen) authScreen.style.display = 'flex';
-    if (appShell) appShell.style.display = 'none';
-    if (onboardingWizard) onboardingWizard.classList.add('hidden');
-    import('./js/views/login.js').then(m => m.initLoginView()).catch(console.error);
+  toggleVisibility(document.getElementById('auth-screen'), true, 'flex');
+  toggleVisibility(document.getElementById('onboarding-wizard'), false, 'flex');
+  toggleVisibility(document.getElementById('app-shell'), false, 'grid');
+  import('./js/views/login.js').then((module) => module.initLoginView()).catch(() => {
+    showToast('Login screen failed to load.', 'danger');
+  });
 }
 
-function showOnboardingWizard() {
-    const authScreen = document.getElementById('auth-screen');
-    const appShell = document.getElementById('app-shell') || document.querySelector('.app-shell');
-    const onboardingWizard = document.getElementById('onboarding-wizard');
-
-    if (authScreen) authScreen.style.display = 'none';
-    if (appShell) appShell.style.display = 'none';
-    if (onboardingWizard) onboardingWizard.classList.remove('hidden');
-    import('./js/views/onboarding.js').then(m => m.initOnboardingView()).catch(console.error);
+function showOnboarding() {
+  toggleVisibility(document.getElementById('auth-screen'), false, 'flex');
+  toggleVisibility(document.getElementById('onboarding-wizard'), true, 'flex');
+  toggleVisibility(document.getElementById('app-shell'), false, 'grid');
+  import('./js/views/onboarding.js').then((module) => module.initOnboardingView()).catch(() => {
+    showToast('Onboarding could not be loaded.', 'danger');
+  });
 }
 
-async function initMainApp() {
-    console.log('[KALAKAR] Main App Initialization Started...');
-    const authScreen = document.getElementById('auth-screen');
-    const appShell = document.getElementById('app-shell') || document.querySelector('.app-shell');
-    const onboardingWizard = document.getElementById('onboarding-wizard');
+async function boot() {
+  initToast();
+  const splash = document.getElementById('splash-screen');
 
-    if (authScreen) authScreen.style.display = 'none';
-    if (appShell) appShell.style.display = 'flex';
-    if (onboardingWizard) onboardingWizard.classList.add('hidden');
-    
-    // Non-blocking module init
-    try { initChatModule(); } catch(e) {}
-    try { initSearch(); } catch(e) {}
-    try { initSettings(); } catch(e) {}
-    setupDeadButtonFallbacks();
-    
-    setRouteHandler(routeToView);
-    initRouter({ defaultView: 'feed' });
-}
-
-function setupDeadButtonFallbacks() {
-    const quickActions = [
-        document.getElementById('nav-post-fab'),
-        document.getElementById('mobile-post-btn'),
-        document.getElementById('post-job-trigger')
-    ];
-
-    quickActions.forEach((action) => {
-        if (!action || action.dataset.boundFallback === '1') return;
-        action.dataset.boundFallback = '1';
-
-        action.addEventListener('click', (event) => {
-            event.preventDefault();
-            const modal = document.getElementById('post-job-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                return;
-            }
-
-            if (typeof window.showToast === 'function') {
-                window.showToast('Create post coming soon.', 'info');
-            }
-        });
-    });
-
-    const postModal = document.getElementById('post-job-modal');
-    const closeButton = postModal?.querySelector('.close-btn');
-    if (closeButton && closeButton.dataset.boundFallback !== '1') {
-        closeButton.dataset.boundFallback = '1';
-        closeButton.addEventListener('click', () => {
-            postModal.classList.add('hidden');
-        });
+  try {
+    const magicLinkResult = await consumeMagicLinkSession();
+    if (!magicLinkResult.success) {
+      showToast(magicLinkResult.error?.message || 'Magic link sign-in failed.', 'danger');
     }
+
+    const currentUser = await getCurrentUser();
+    if (!currentUser.success) {
+      showAuthScreen();
+      return;
+    }
+
+    const profileResult = await getCreatorProfile(currentUser.data.$id);
+    if (!profileResult.success) {
+      showOnboarding();
+      return;
+    }
+
+    await initMainApp(profileResult.data);
+  } catch (error) {
+    console.error('[KALAKAR] Boot error', error);
+    showToast('The app could not finish loading. Refresh and try again.', 'danger');
+    showAuthScreen();
+  } finally {
+    if (splash) splash.style.display = 'none';
+  }
 }
 
-// Global Intersections for Video Autoplay
-window.kalakarVideoObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        const video = entry.target;
-        if (video.tagName === 'VIDEO') {
-            if (entry.isIntersecting) video.play().catch(() => {});
-            else video.pause();
-        }
-    });
-}, { threshold: 0.6 });
-
-// Direct Invoke
 boot();

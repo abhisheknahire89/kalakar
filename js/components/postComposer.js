@@ -1,191 +1,149 @@
-import { databases, storage, ID, DATABASE_ID, COLLECTIONS, BUCKETS } from '../appwriteClient.js';
+import { createPost, getProfileSnapshot } from '../services/appData.js';
+import { getFilePreviewUrl, BUCKETS } from '../appwriteClient.js';
 import { renderStage } from './feed.js';
-import { StorageServiceInstance as StorageService } from './core.js';
 import { showToast } from './toast.js';
 
+let modalBound = false;
 let selectedFile = null;
 
-export function initPostComposer() {
-  const existing = document.getElementById('post-composer-modal');
-  if (existing) existing.remove();
+function ensureModal() {
+  let modal = document.getElementById('post-composer-modal');
+  if (modal) return modal;
 
-  const userProfile = StorageService.get('kalakar_user_profile');
-  if (!userProfile) return;
-
-  const composerContainer = document.createElement('div');
-  composerContainer.id = 'post-composer-modal';
-  composerContainer.className = 'modal-overlay hidden';
-  
-  const avatarUrl = userProfile.avatarFileId ? 
-    storage.getFilePreview(BUCKETS.avatars, userProfile.avatarFileId, 100).href : 
-    `https://i.pravatar.cc/100?u=${userProfile.$id}`;
-
-  composerContainer.innerHTML = `
-    <div class="modal-content panel profile-large" style="max-width: 500px; padding: 24px;">
-      <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="font-size: 1.4rem;">Share your craft</h2>
-        <button id="close-composer-btn" class="ghost small" style="font-size: 1.5rem;">&times;</button>
+  modal = document.createElement('div');
+  modal.id = 'post-composer-modal';
+  modal.className = 'modal-overlay hidden';
+  modal.innerHTML = `
+    <div class="modal-content panel beta-composer">
+      <header class="beta-composer-header">
+        <div>
+          <p class="beta-kicker">Create</p>
+          <h2>Post to the stage</h2>
+        </div>
+        <button id="composer-close-btn" class="ghost small" aria-label="Close composer">Close</button>
       </header>
 
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-        <img src="${avatarUrl}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;">
+      <div class="beta-composer-profile">
+        <img id="composer-avatar" class="beta-avatar" alt="Your avatar" />
         <div>
-          <div style="font-weight: 700;">${userProfile.name}</div>
-          <div class="meta" style="font-size: 0.8rem;">Posting to The Stage</div>
+          <strong id="composer-name">You</strong>
+          <p class="meta">Text, image, video, or a mixed update.</p>
         </div>
       </div>
 
-      <textarea id="composer-caption" placeholder="What are you working on? #Acting #DOP #Mumbai" style="width: 100%; height: 120px; background: transparent; border: none; color: var(--text); resize: none; font-size: 1.1rem; padding: 0; outline: none; margin-bottom: 16px;"></textarea>
+      <textarea id="composer-caption" class="beta-composer-textarea" placeholder="What are you building, shooting, casting, or learning this week?"></textarea>
 
-      <div id="composer-drop-zone" style="border: 2px dashed var(--line); border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; position: relative;">
-        <div id="drop-zone-content">
-          <span style="font-size: 2rem;">📹</span>
-          <p class="meta mt-2">Upload Video or Photo</p>
-          <p class="meta" style="font-size: 0.75rem;">Max 100MB · MP4/MOV/JPG</p>
+      <label class="beta-upload-card" for="composer-file-input">
+        <input type="file" id="composer-file-input" accept="image/*,video/*" hidden />
+        <div id="composer-upload-copy">
+          <strong>Add media</strong>
+          <p class="meta">Images and vertical videos both work here.</p>
         </div>
-        <video id="composer-preview-video" class="hidden" style="width: 100%; border-radius: 12px;" controls playsinline></video>
-        <img id="composer-preview-img" class="hidden" style="width: 100%; border-radius: 12px;">
-        <input type="file" id="composer-file-input" hidden accept="video/*,image/*">
-      </div>
+        <div id="composer-preview"></div>
+      </label>
 
-      <div id="composer-upload-status" class="hidden mt-4">
-        <div class="meta mb-1">Uploading... <span id="upload-pct">0%</span></div>
-        <div style="width: 100%; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden;">
-          <div id="upload-progress-bar" style="width: 0%; height: 100%; background: var(--brand-gold); transition: width 0.3s;"></div>
-        </div>
-      </div>
+      <div id="composer-error" class="meta" style="color:#ff8b8b; min-height: 20px;"></div>
 
-      <div style="margin-top: 24px; display: flex; align-items: center; gap: 12px;">
-        <label style="display: flex; align-items: center; gap: 8px; color: var(--brand-gold); cursor: pointer; font-size: 0.9rem;">
-          <input type="checkbox" id="composer-link-prompt" style="accent-color: var(--brand-gold);"> Link to Weekly Prompt
-        </label>
+      <div class="beta-composer-actions">
+        <button id="composer-clear-btn" class="ghost">Reset</button>
+        <button id="composer-submit-btn" class="primary action-gold">Publish</button>
       </div>
-
-      <button id="composer-post-btn" class="primary full-width mt-4" style="padding: 14px; font-weight: 700; background: var(--brand-gold); color: black;" disabled>Post to Stage ✦</button>
     </div>
   `;
 
-  document.body.appendChild(composerContainer);
+  document.body.appendChild(modal);
+  return modal;
+}
 
-  const modal = document.getElementById('post-composer-modal');
-  const fileInput = document.getElementById('composer-file-input');
-  const dropZone = document.getElementById('composer-drop-zone');
-  const postBtn = document.getElementById('composer-post-btn');
+function resetComposer() {
+  selectedFile = null;
   const caption = document.getElementById('composer-caption');
+  const preview = document.getElementById('composer-preview');
+  const copy = document.getElementById('composer-upload-copy');
+  const error = document.getElementById('composer-error');
+  const input = document.getElementById('composer-file-input');
 
-  document.getElementById('close-composer-btn').onclick = () => {
-      modal.classList.add('hidden');
-      reset();
+  if (caption) caption.value = '';
+  if (preview) preview.innerHTML = '';
+  if (copy) copy.classList.remove('hidden');
+  if (error) error.textContent = '';
+  if (input) input.value = '';
+}
+
+function renderPreview(file) {
+  const preview = document.getElementById('composer-preview');
+  const copy = document.getElementById('composer-upload-copy');
+  if (!preview || !copy) return;
+
+  const objectUrl = URL.createObjectURL(file);
+  copy.classList.add('hidden');
+  preview.innerHTML = file.type.startsWith('video/')
+    ? `<video src="${objectUrl}" controls playsinline></video>`
+    : `<img src="${objectUrl}" alt="Selected upload preview" />`;
+}
+
+function bindModal() {
+  if (modalBound) return;
+  modalBound = true;
+
+  const modal = ensureModal();
+  const close = () => {
+    modal.classList.add('hidden');
+    resetComposer();
   };
 
-  dropZone.onclick = (e) => {
-    if (e.target.id !== 'composer-preview-video') fileInput.click();
-  };
+  document.getElementById('composer-close-btn')?.addEventListener('click', close);
+  document.getElementById('composer-clear-btn')?.addEventListener('click', resetComposer);
 
-  fileInput.onchange = (e) => {
-    selectedFile = e.target.files[0];
-    if (!selectedFile) return;
-    
-    document.getElementById('drop-zone-content').classList.add('hidden');
-    if (selectedFile.type.startsWith('video/')) {
-        const url = URL.createObjectURL(selectedFile);
-        const video = document.getElementById('composer-preview-video');
-        video.src = url;
-        video.classList.remove('hidden');
-    } else {
-        const url = URL.createObjectURL(selectedFile);
-        const img = document.getElementById('composer-preview-img');
-        img.src = url;
-        img.classList.remove('hidden');
-    }
-    postBtn.disabled = false;
-  };
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) close();
+  });
 
-  caption.oninput = () => {
-      if (caption.value.trim().length > 0 || selectedFile) postBtn.disabled = false;
-      else postBtn.disabled = true;
-  };
+  document.getElementById('composer-file-input')?.addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    selectedFile = file;
+    renderPreview(file);
+  });
 
-  postBtn.onclick = async () => {
-    if (caption.value.trim().length === 0 && !selectedFile) return;
-    
-    postBtn.disabled = true;
-    postBtn.textContent = 'Preparing...';
-    
-    const status = document.getElementById('composer-upload-status');
-    const progress = document.getElementById('upload-progress-bar');
-    const pct = document.getElementById('upload-pct');
-    status.classList.remove('hidden');
+  document.getElementById('composer-submit-btn')?.addEventListener('click', async () => {
+    const caption = document.getElementById('composer-caption');
+    const submit = document.getElementById('composer-submit-btn');
+    const error = document.getElementById('composer-error');
+
+    submit.disabled = true;
+    submit.textContent = 'Publishing...';
+    if (error) error.textContent = '';
 
     try {
-      let fileId = null;
-      let thumbId = null;
-
-      if (selectedFile) {
-        pct.textContent = '30%';
-        progress.style.width = '30%';
-        
-        const result = await storage.createFile(BUCKETS.avatars, ID.unique(), selectedFile);
-        fileId = result.$id;
-
-        pct.textContent = '70%';
-        progress.style.width = '70%';
-      }
-
-      await databases.createDocument(
-        DATABASE_ID,
-        COLLECTIONS.posts,
-        ID.unique(),
-        {
-          authorId: userProfile.$id, // Uses the $id of the profile doc
-          contentText: caption.value,
-          videoFileId: fileId,
-          category: userProfile.primaryCraft.toLowerCase(),
-          applaudCount: 0,
-          commentCount: 0,
-          isPromptLinked: document.getElementById('composer-link-prompt').checked,
-          createdAt: new Date().toISOString()
-        }
-      );
-
-      pct.textContent = '100%';
-      progress.style.width = '100%';
-      showToast('Cast successfully!', 'success');
-      
-      setTimeout(() => {
-        modal.classList.add('hidden');
-        reset();
-        renderStage(); // Refresh feed
-      }, 500);
-
-    } catch (error) {
-      console.error('Casting failed:', error);
-      showToast('Casting failed. Try again.', 'danger');
-      postBtn.disabled = false;
-      postBtn.textContent = 'Post to Stage ✦';
+      await createPost({ caption: caption?.value || '', file: selectedFile });
+      showToast('Post published to your feed.', 'success');
+      close();
+      await renderStage();
+    } catch (reason) {
+      if (error) error.textContent = reason?.message || 'Could not publish your post.';
+      showToast(reason?.message || 'Could not publish your post.', 'danger');
+    } finally {
+      submit.disabled = false;
+      submit.textContent = 'Publish';
     }
-  };
-
-  function reset() {
-    selectedFile = null;
-    caption.value = '';
-    document.getElementById('drop-zone-content').classList.remove('hidden');
-    document.getElementById('composer-preview-video').classList.add('hidden');
-    document.getElementById('composer-preview-img').classList.add('hidden');
-    document.getElementById('composer-upload-status').classList.add('hidden');
-    document.getElementById('composer-progress-bar').style.width = '0%';
-    postBtn.disabled = true;
-    postBtn.textContent = 'Post to Stage ✦';
-  }
+  });
 }
 
 export function openPostComposer() {
-  const modal = document.getElementById('post-composer-modal');
-  if (modal) {
-    modal.classList.remove('hidden');
-  } else {
-    initPostComposer();
-    const newModal = document.getElementById('post-composer-modal');
-    if (newModal) newModal.classList.remove('hidden');
+  const modal = ensureModal();
+  bindModal();
+
+  const profile = getProfileSnapshot();
+  const avatar = document.getElementById('composer-avatar');
+  const name = document.getElementById('composer-name');
+
+  if (avatar) {
+    avatar.src = profile?.avatarFileId
+      ? getFilePreviewUrl(BUCKETS.AVATARS || BUCKETS.avatars, profile.avatarFileId)
+      : `https://i.pravatar.cc/120?u=${encodeURIComponent(profile?.$id || 'kalakar')}`;
   }
+  if (name) name.textContent = profile?.name || 'Your profile';
+
+  modal.classList.remove('hidden');
 }

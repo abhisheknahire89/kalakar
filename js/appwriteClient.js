@@ -1,68 +1,112 @@
-import { Client, Account, Databases, Storage, ID, Query } from 'https://cdn.jsdelivr.net/npm/appwrite@14.0.1/+esm';
+import { Client, Account, Databases, Storage, ID, Query, Permission, Role } from 'https://cdn.jsdelivr.net/npm/appwrite@14.0.1/+esm';
 
-export const APPWRITE_CONFIG = {
-  ENDPOINT: 'https://fra.cloud.appwrite.io/v1',
-  PROJECT_ID: '69c8ee1b0037e381d046',
-  DATABASE_ID: 'kalakar_db',
-  COLLECTIONS: {
-    CREATORS: 'creators',
-    POSTS: 'posts',
-    CONNECTIONS: 'connections',
-    CREDITS: 'credits',
-    VOUCHES: 'vouches',
-    JOBS: 'jobs',
-    APPLICATIONS: 'applications',
-    NOTIFICATIONS: 'notifications',
-    CONVERSATIONS: 'conversations',
-    MESSAGES: 'messages',
-    CONTRACTS: 'contracts',
-    creators: 'creators',
-    posts: 'posts',
-    connections: 'connections',
-    credits: 'credits',
-    vouches: 'vouches',
-    jobs: 'jobs',
-    applications: 'applications',
-    notifications: 'notifications',
-    conversations: 'conversations',
-    messages: 'messages',
-    contracts: 'contracts'
-  },
-  BUCKETS: {
-    AVATARS: 'avatars',
-    POST_MEDIA: 'post_media',
-    REELS: 'reels',
-    avatars: 'avatars',
-    post_media: 'post_media',
-    reels: 'reels'
-  },
-  // Backward-compatible keys used by older modules
-  databaseId: 'kalakar_db',
+const ENDPOINT = 'https://fra.cloud.appwrite.io/v1';
+const PROJECT_ID = '69c8ee1b0037e381d046';
+const DATABASE_ID = 'kalakar_db';
+
+const COLLECTIONS = {
+  CREATORS: 'creators',
+  POSTS: 'posts',
+  CONNECTIONS: 'connections',
+  CREDITS: 'credits',
+  VOUCHES: 'vouches',
+  JOBS: 'jobs',
+  APPLICATIONS: 'applications',
+  NOTIFICATIONS: 'notifications',
+  CONVERSATIONS: 'conversations',
+  MESSAGES: 'messages',
+  DEALS: 'deals',
+  CONTRACTS: 'contracts',
+  creators: 'creators',
+  posts: 'posts',
+  connections: 'connections',
+  credits: 'credits',
+  vouches: 'vouches',
+  jobs: 'jobs',
+  applications: 'applications',
+  notifications: 'notifications',
+  conversations: 'conversations',
+  messages: 'messages',
+  deals: 'deals',
+  contracts: 'contracts'
+};
+
+const BUCKETS = {
+  AVATARS: 'avatars',
+  POST_MEDIA: 'avatars',
+  REELS: 'avatars',
+  avatars: 'avatars',
+  post_media: 'avatars',
+  reels: 'avatars'
+};
+
+const APPWRITE_CONFIG = {
+  ENDPOINT,
+  PROJECT_ID,
+  DATABASE_ID,
+  COLLECTIONS,
+  BUCKETS,
+  databaseId: DATABASE_ID,
   collections: {
-    creators: 'creators',
-    posts: 'posts',
-    connections: 'connections',
-    credits: 'credits',
-    applications: 'applications',
-    jobs: 'jobs'
+    creators: COLLECTIONS.creators,
+    posts: COLLECTIONS.posts,
+    connections: COLLECTIONS.connections,
+    credits: COLLECTIONS.credits,
+    jobs: COLLECTIONS.jobs,
+    applications: COLLECTIONS.applications,
+    notifications: COLLECTIONS.notifications,
+    conversations: COLLECTIONS.conversations,
+    messages: COLLECTIONS.messages,
+    deals: COLLECTIONS.deals,
+    contracts: COLLECTIONS.contracts
   },
   buckets: {
-    avatars: 'avatars',
-    post_media: 'post_media',
-    reels: 'reels'
+    avatars: BUCKETS.avatars,
+    post_media: BUCKETS.post_media,
+    reels: BUCKETS.reels
   }
 };
 
-export const DATABASE_ID = APPWRITE_CONFIG.DATABASE_ID;
-export const COLLECTIONS = APPWRITE_CONFIG.COLLECTIONS;
-export const BUCKETS = APPWRITE_CONFIG.BUCKETS;
-
 const client = new Client()
-  .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-  .setProject(APPWRITE_CONFIG.PROJECT_ID);
+  .setEndpoint(ENDPOINT)
+  .setProject(PROJECT_ID);
 
-export const account = new Account(client);
-export const databases = new Databases(client);
-export const storage = new Storage(client);
+const account = new Account(client);
+const databases = new Databases(client);
+const storage = new Storage(client);
 
-export { ID, Query, client };
+function buildFileUrl(bucketId, fileId, mode = 'view') {
+  if (!bucketId || !fileId) return '';
+  const safeBucket = encodeURIComponent(bucketId);
+  const safeFile = encodeURIComponent(fileId);
+  return `${ENDPOINT}/storage/buckets/${safeBucket}/files/${safeFile}/${mode}?project=${PROJECT_ID}`;
+}
+
+function getFilePreviewUrl(bucketId, fileId) {
+  return buildFileUrl(bucketId, fileId, 'preview');
+}
+
+function getFileViewUrl(bucketId, fileId) {
+  return buildFileUrl(bucketId, fileId, 'view');
+}
+
+export {
+  APPWRITE_CONFIG,
+  ENDPOINT,
+  PROJECT_ID,
+  DATABASE_ID,
+  COLLECTIONS,
+  BUCKETS,
+  account,
+  databases,
+  storage,
+  client,
+  ID,
+  Query,
+  Permission,
+  Role,
+  getFilePreviewUrl,
+  getFileViewUrl
+};
+
+export default client;

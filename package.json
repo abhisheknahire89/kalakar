@@ -4,6 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
+    "appwrite:init": "node initAppwrite.js",
     "test": "node scripts/healthCheck.js"
   },
   "repository": {

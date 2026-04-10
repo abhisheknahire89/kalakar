@@ -1,156 +1,142 @@
 import { createCreatorProfile } from '../auth.js';
 import { storage, ID, BUCKETS } from '../appwriteClient.js';
+import { showToast } from '../components/toast.js';
 
-let currentStep = 1;
-const profileData = {
-    primaryCraft: 'Actor',
-    name: '',
-    city: 'Mumbai',
-    avatarFileId: '',
-    accountType: 'talent',
-    yearsExperience: 0,
-    reelFileId: ''
+const profileDraft = {
+  primaryCraft: 'Actor',
+  accountType: 'talent',
+  name: '',
+  city: 'Mumbai',
+  avatarFileId: '',
+  yearsExperience: 0,
+  reelFileId: '',
+  bio: ''
 };
 
-export function initOnboardingView() {
-    const nextBtns = document.querySelectorAll('.ob-next-btn');
-    const prevBtns = document.querySelectorAll('.ob-prev-btn');
-    const craftBtns = document.querySelectorAll('.craft-select');
-    const accountCards = document.querySelectorAll('.account-select-card');
-    const uploadBtn = document.getElementById('ob-complete-btn');
-    const avatarInput = document.getElementById('ob-avatar-input');
-    const reelInput = document.getElementById('ob-reel-input');
-    const skipReelBtn = document.getElementById('ob-skip-reel');
-
-    // 1. Craft Selection
-    craftBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            craftBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            profileData.primaryCraft = btn.dataset.craft;
-        });
-    });
-
-    // 2. Account Type Selection
-    accountCards.forEach(card => {
-        card.addEventListener('click', () => {
-            accountCards.forEach(c => {
-                c.classList.remove('active');
-                c.style.borderColor = 'var(--line)';
-                c.style.background = 'transparent';
-            });
-            card.classList.add('active');
-            card.style.borderColor = 'var(--brand-gold)';
-            card.style.background = 'rgba(197, 160, 89, 0.05)';
-            profileData.accountType = card.dataset.type;
-        });
-    });
-
-    // 3. Navigation
-    nextBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (currentStep === 2) {
-                profileData.name = String(document.getElementById('ob-name')?.value || '').trim();
-                profileData.city = String(document.getElementById('ob-city')?.value || 'Mumbai').trim();
-                if (!profileData.name) {
-                    notify('Please enter your name', 'info');
-                    return;
-                }
-            }
-            if (currentStep === 3) {
-                const years = parseInt(String(document.getElementById('ob-exp')?.value || '0'), 10);
-                profileData.yearsExperience = Number.isFinite(years) ? years : 0;
-            }
-            goToStep(currentStep + 1);
-        });
-    });
-
-    prevBtns.forEach(btn => {
-        btn.addEventListener('click', () => goToStep(currentStep - 1));
-    });
-
-    // 4. File Uploads (Avatar)
-    avatarInput?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const preview = document.getElementById('ob-avatar-preview');
-        preview.innerHTML = '<span class="spinner"></span>';
-
-        try {
-            const avatarBucketId = BUCKETS.AVATARS || BUCKETS.avatars;
-            const result = await storage.createFile(avatarBucketId, ID.unique(), file);
-            profileData.avatarFileId = result.$id;
-            const url = storage.getFilePreview(avatarBucketId, result.$id).href;
-            preview.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`;
-        } catch (error) {
-            notify('Failed to upload image', 'danger');
-            preview.innerHTML = '📸';
-        }
-    });
-
-    // 5. Reel Upload (Final Step)
-    reelInput?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const dropZone = document.getElementById('ob-reel-drop');
-        dropZone.innerHTML = '<p class="meta">Uploading Reel... <span id="reel-progress">0%</span></p>';
-
-        try {
-            const mediaBucketId = BUCKETS.REELS || BUCKETS.reels || BUCKETS.AVATARS || BUCKETS.avatars;
-            const result = await storage.createFile(mediaBucketId, ID.unique(), file);
-            profileData.reelFileId = result.$id;
-            dropZone.innerHTML = `<p class="meta" style="color:var(--success);">✅ Video Uploaded</p>`;
-        } catch (error) {
-            notify('Reel upload failed', 'danger');
-            dropZone.innerHTML = '<span style="font-size: 2rem;">📹</span><p class="meta">Upload Reel (Max 100MB)</p>';
-        }
-    });
-
-    skipReelBtn?.addEventListener('click', () => {
-        handleComplete();
-    });
-
-    uploadBtn?.addEventListener('click', () => {
-        handleComplete();
-    });
-}
+let currentStep = 1;
 
 function goToStep(step) {
-    const next = Math.max(1, Math.min(4, step));
-    document.querySelectorAll('.ob-step').forEach(s => s.classList.add('hidden'));
-    document.getElementById(`ob-step-${next}`)?.classList.remove('hidden');
-    currentStep = next;
+  currentStep = Math.max(1, Math.min(4, step));
+  document.querySelectorAll('.ob-step').forEach((node) => node.classList.add('hidden'));
+  document.getElementById(`ob-step-${currentStep}`)?.classList.remove('hidden');
 }
 
-async function handleComplete() {
-    const btn = document.getElementById('ob-complete-btn');
-    if (!btn) return;
-    btn.disabled = true;
-    btn.textContent = 'Saving Profile...';
+async function uploadFile(file, bucketId) {
+  const result = await storage.createFile(bucketId, ID.unique(), file);
+  return result.$id;
+}
+
+export function initOnboardingView() {
+  if (document.body.dataset.onboardingBound === '1') {
+    goToStep(1);
+    return;
+  }
+  document.body.dataset.onboardingBound = '1';
+
+  document.querySelectorAll('.craft-select').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.craft-select').forEach((node) => node.classList.remove('active'));
+      button.classList.add('active');
+      profileDraft.primaryCraft = button.dataset.craft || 'Actor';
+    });
+  });
+
+  document.querySelectorAll('.account-select-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.account-select-card').forEach((node) => node.classList.remove('active'));
+      card.classList.add('active');
+      profileDraft.accountType = card.dataset.type || 'talent';
+    });
+  });
+
+  document.querySelectorAll('.ob-next-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (currentStep === 2) {
+        profileDraft.name = String(document.getElementById('ob-name')?.value || '').trim();
+        profileDraft.city = String(document.getElementById('ob-city')?.value || 'Mumbai').trim();
+        profileDraft.bio = `${profileDraft.primaryCraft} based in ${profileDraft.city}.`;
+
+        if (!profileDraft.name) {
+          showToast('Add your display name to continue.', 'danger');
+          return;
+        }
+      }
+
+      if (currentStep === 3) {
+        profileDraft.yearsExperience = Number(document.getElementById('ob-exp')?.value || 0);
+      }
+
+      goToStep(currentStep + 1);
+    });
+  });
+
+  document.querySelectorAll('.ob-prev-btn').forEach((button) => {
+    button.addEventListener('click', () => goToStep(currentStep - 1));
+  });
+
+  document.getElementById('ob-avatar-input')?.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const preview = document.getElementById('ob-avatar-preview');
+    if (preview) preview.innerHTML = '<span class="spinner"></span>';
 
     try {
-        const result = await createCreatorProfile(profileData);
-        if (result.success) {
-            notify('Profile created successfully.', 'success');
-            window.location.reload();
-            return;
-        }
-
-        notify(result.error || 'Failed to save profile.', 'danger');
+      const avatarFileId = await uploadFile(file, BUCKETS.AVATARS || BUCKETS.avatars);
+      profileDraft.avatarFileId = avatarFileId;
+      if (preview) {
+        preview.innerHTML = `<img src="${storage.getFilePreview(BUCKETS.AVATARS || BUCKETS.avatars, avatarFileId, 160, 160).href}" alt="Avatar preview" style="width:100%;height:100%;object-fit:cover;">`;
+      }
     } catch (_) {
-        notify('Failed to save profile.', 'danger');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Complete Setup ✦';
+      if (preview) preview.textContent = '📸';
+      showToast('Avatar upload failed. You can continue without it.', 'danger');
     }
-}
+  });
 
-function notify(message, type = 'info') {
-    if (typeof window.showToast === 'function') {
-        window.showToast(message, type);
-        return;
+  document.getElementById('ob-reel-drop')?.addEventListener('click', () => {
+    document.getElementById('ob-reel-input')?.click();
+  });
+
+  document.getElementById('ob-reel-input')?.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reelDrop = document.getElementById('ob-reel-drop');
+    if (reelDrop) reelDrop.innerHTML = '<p class="meta">Uploading reel...</p>';
+
+    try {
+      profileDraft.reelFileId = await uploadFile(file, BUCKETS.REELS || BUCKETS.reels || BUCKETS.POST_MEDIA || BUCKETS.post_media);
+      if (reelDrop) reelDrop.innerHTML = '<p class="meta" style="color:var(--brand-gold);">Showreel uploaded</p>';
+    } catch (_) {
+      if (reelDrop) reelDrop.innerHTML = '<span style="font-size: 2rem;">📹</span><p class="meta">Upload Video (Max 50MB)</p><input type="file" id="ob-reel-input" hidden accept="video/*">';
+      showToast('Reel upload failed. You can complete setup without it.', 'danger');
     }
-    console[type === 'danger' ? 'error' : 'log'](message);
+  });
+
+  const complete = async () => {
+    const completeButton = document.getElementById('ob-complete-btn');
+    if (completeButton) {
+      completeButton.disabled = true;
+      completeButton.textContent = 'Setting up your profile...';
+    }
+
+    const result = await createCreatorProfile(profileDraft);
+    if (!result.success) {
+      showToast(result.error?.message || 'We could not finish onboarding.', 'danger');
+      if (completeButton) {
+        completeButton.disabled = false;
+        completeButton.textContent = 'Complete Setup ✦';
+      }
+      return;
+    }
+
+    showToast('Profile ready. Welcome to Kalakar beta.', 'success');
+    window.location.hash = '#feed';
+    window.location.reload();
+  };
+
+  document.getElementById('ob-complete-btn')?.addEventListener('click', complete);
+  document.getElementById('ob-skip-reel')?.addEventListener('click', complete);
+
+  goToStep(1);
 }

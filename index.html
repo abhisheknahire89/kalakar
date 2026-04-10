@@ -47,40 +47,33 @@
     </div>
   </div>
 
-  <!-- AUTH SCREEN (Phase 1: Phone OTP & Google OAuth) -->
+  <!-- AUTH SCREEN -->
   <section id="auth-screen" class="auth-view" style="display: none; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg);">
     <div class="login-container glass-panel panel" style="max-width: 420px; text-align: center; padding: 2.5rem; margin: 0 auto;">
       <div class="login-logo mb-4">
         <h1 class="brand-title" style="font-size: 3rem; font-family: 'Yatra One', cursive;">kalakar</h1>
-        <p class="meta">Where talent meets the screen</p>
+        <p class="meta">Creator careers, casting, and premium deal flow in one place.</p>
       </div>
 
-      <!-- Phone OTP Section -->
-      <div id="phone-form">
-        <h3 class="meta mb-3" style="text-align: left;">Sign in with Phone</h3>
-        <div class="phone-input-group mb-4" style="display: flex; gap: 10px;">
-          <select id="country-code" style="width: 80px; padding: 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
-            <option value="+91" selected>+91 🇮🇳</option>
-          </select>
-          <input type="tel" id="phone-input" placeholder="Phone number" maxlength="10" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
+      <form id="magic-link-form" class="auth-stack">
+        <h3 class="meta mb-3" style="text-align: left;">Sign in with magic link</h3>
+        <div class="field-stack mb-4">
+          <label for="magic-link-email" class="meta" style="text-align: left;">Work email</label>
+          <input type="email" id="magic-link-email" autocomplete="email" placeholder="you@studio.com" style="width: 100%; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);" />
         </div>
-        <button id="send-otp-btn" class="primary full-width" style="padding: 14px; border-radius: 20px; font-weight: 700; background: var(--brand-gold); color: black;">Send OTP</button>
+        <button id="send-magic-link-btn" type="submit" class="primary full-width" style="padding: 14px; border-radius: 20px; font-weight: 700; background: var(--brand-gold); color: black;">Email me a magic link</button>
+      </form>
+
+      <div id="magic-link-sent-state" class="hidden" aria-live="polite">
+        <div class="panel" style="padding: 18px; border-radius: 18px; background: rgba(197, 160, 89, 0.08); border: 1px solid rgba(197, 160, 89, 0.24);">
+          <p class="meta" style="margin: 0 0 8px 0;">Check your inbox</p>
+          <strong id="magic-link-email-display" style="display: block; margin-bottom: 8px;"></strong>
+          <p class="meta" style="margin: 0;">Open the secure sign-in link on this device to continue.</p>
+        </div>
+        <button id="change-email-btn" class="ghost small" style="margin-top: 16px; color: var(--muted); background: none; border: none; cursor: pointer;">Use a different email</button>
       </div>
 
-      <!-- OTP Verify Section (Hidden) -->
-      <div id="otp-form" class="hidden">
-        <p class="meta mb-3">Enter the 6-digit code sent to<br><strong id="otp-phone-display">+91 98765 43210</strong></p>
-        <div class="otp-inputs mb-4" style="display: flex; gap: 8px; justify-content: center;">
-          <input type="text" maxlength="1" class="otp-digit" data-index="0" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
-          <input type="text" maxlength="1" class="otp-digit" data-index="1" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
-          <input type="text" maxlength="1" class="otp-digit" data-index="2" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
-          <input type="text" maxlength="1" class="otp-digit" data-index="3" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
-          <input type="text" maxlength="1" class="otp-digit" data-index="4" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
-          <input type="text" maxlength="1" class="otp-digit" data-index="5" style="width: 40px; height: 50px; text-align: center; font-size: 1.5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);">
-        </div>
-        <button id="verify-otp-btn" class="primary full-width mb-3" style="padding: 14px; border-radius: 20px; font-weight: 700; background: var(--brand-gold); color: black;">Verify</button>
-        <button id="change-number-btn" class="ghost small" style="color: var(--muted); background: none; border: none; cursor: pointer;">← Change number</button>
-      </div>
+      <div id="auth-status" class="meta mt-3" style="min-height: 20px;" aria-live="polite"></div>
 
       <div class="login-divider mb-4 mt-4" style="display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.8rem;">
         <div style="flex: 1; height: 1px; background: var(--line);"></div>
@@ -143,34 +136,30 @@
               d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
             </path>
           </svg>
-          <span>Home</span>
+          <span>Feed</span>
         </a>
-        <a href="#network" class="nav-item" data-nav="network">
+        <a href="#explore" class="nav-item" data-nav="explore">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
             </path>
           </svg>
-          <span>Network</span>
+          <span>Explore</span>
         </a>
-        <a href="#jobs" class="nav-item" data-nav="jobs">
+        <a href="#deal-room" class="nav-item" id="msg-trigger" data-nav="deal-room">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
             </path>
           </svg>
-          <span>Jobs</span>
-        </a>
-        <a href="#messages" class="nav-item" id="msg-trigger" data-nav="messages">
           <div class="icon-wrapper">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z">
               </path>
             </svg>
-            <span class="nav-badge">3</span>
           </div>
-          <span>Messaging</span>
+          <span>Deal Room</span>
         </a>
         <a href="#notifications" class="nav-item" data-target="notifications" data-nav="notifications">
           <div class="icon-wrapper">
@@ -179,7 +168,7 @@
                 d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
               </path>
             </svg>
-            <span class="nav-badge">12</span>
+            <span class="nav-badge hidden">0</span>
           </div>
           <span>Notifications</span>
         </a>
@@ -196,10 +185,10 @@
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
         </button>
-        <button class="icon-btn" id="mobile-msg-trigger" aria-label="Messages">
+        <button class="icon-btn" id="mobile-msg-trigger" aria-label="Deal room">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z">
             </path>
           </svg>
         </button>
@@ -392,7 +381,7 @@
     </div>
   </div>
 
-  <main class="app-shell">
+  <main id="app-shell" class="app-shell">
     <aside class="sidebar left-sidebar">
       <!-- New Profile Card Component -->
       <div class="profile-card card" style="padding: 16px; text-align: center;">
@@ -583,7 +572,7 @@
 
       <!-- SHORTLIST MANAGER SECTION -->
       <!-- NETWORK & TALENT DISCOVERY SECTION -->
-      <section class="view hidden" id="network-view" data-view="network">
+      <section class="view hidden" id="network-view" data-view="explore">
         <div class="view-header" style="flex-direction: column; align-items: flex-start; gap: 16px;">
           <h2 style="font-family: 'Yatra One', serif; font-size: 1.8rem; margin: 0;">Talent Discovery</h2>
           <div style="width: 100%; position: relative;">
@@ -608,7 +597,7 @@
       </section>
 
       <!-- MESSAGING SECTION (Prompt 4 Refactored) -->
-      <section class="view hidden" id="messages-view" data-view="messages">
+      <section class="view hidden" id="messages-view" data-view="deal-room">
         <div class="messaging-layout">
           <!-- Chat Sidebar: Professional Contacts -->
           <div class="chat-sidebar">
@@ -683,7 +672,7 @@
       </section>
 
       <!-- Talent Profile Modal -->
-      <div id="talent-profile-modal" class="modal-overlay hidden">
+      <div id="legacy-talent-profile-modal" class="modal-overlay hidden">
         <div class="modal-content panel profile-large">
           <header class="modal-header">
             <h2>Verified Professional</h2>
@@ -834,7 +823,7 @@
             <p class="meta mb-4">Upload your primary showreel or performance video to get verified faster.</p>
             <div id="ob-reel-drop" style="width: 100%; height: 200px; border: 2px dashed var(--line); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin-bottom: 2rem; cursor: pointer;">
                <span style="font-size: 2rem;">📹</span>
-               <p class="meta">Upload Video (Max 100MB)</p>
+               <p class="meta">Upload Video (Max 50MB)</p>
                <input type="file" id="ob-reel-input" hidden accept="video/*">
             </div>
             <button class="ghost mb-4 full-width" id="ob-skip-reel">Skip for now →</button>
@@ -957,7 +946,7 @@
   </main>
 
   <!-- Global Bottom Navigation (Thumb Zone) -->
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" aria-label="Primary">
     <a href="#feed" class="nav-item active" data-view="feed" data-nav="feed">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -966,13 +955,13 @@
       </svg>
       <span>Feed</span>
     </a>
-    <a href="#network" class="nav-item" data-view="network" data-nav="network">
+    <a href="#explore" class="nav-item" data-view="explore" data-nav="explore">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
         </path>
       </svg>
-      <span>Network</span>
+      <span>Explore</span>
     </a>
     <a href="#" class="nav-item fab-item" id="nav-post-fab" aria-label="Create Post">
       <div class="fab-btn">
@@ -980,23 +969,23 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
         </svg>
       </div>
-      <span>Post</span>
+      <span>Create</span>
     </a>
-    <a href="#jobs" class="nav-item" data-view="jobs" data-nav="jobs">
+    <a href="#notifications" class="nav-item" data-view="notifications" data-nav="notifications">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
         </path>
       </svg>
-      <span>Jobs</span>
+      <span>Alerts</span>
     </a>
-    <a href="#notifications" class="nav-item" data-view="notifications" data-nav="notifications">
+    <a href="#profile" class="nav-item" data-view="profile" data-nav="profile">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+          d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0">
         </path>
       </svg>
-      <span>Notifications</span>
+      <span>Profile</span>
     </a>
   </nav>
 
@@ -1158,35 +1147,35 @@
   <div class="film-grain-overlay"></div>
 
   <!-- Mobile Bottom Navigation (Phase 1.2) -->
-  <nav class="mobile-nav mobile-only">
+  <nav class="mobile-nav mobile-only" aria-label="Mobile Primary">
     <a href="#feed" class="active" data-nav="feed">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
       <span>Feed</span>
     </a>
-    <a href="#network" data-nav="network">
+    <a href="#explore" data-nav="explore">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
-      <span>Network</span>
+      <span>Explore</span>
     </a>
     <button class="post-input-btn-mobile" id="mobile-post-btn" style="border:none; background:var(--brand-gold); color:black; width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-top:-20px; box-shadow: 0 4px 12px rgba(212, 168, 67, 0.4);">
        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28">
          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
        </svg>
     </button>
-    <a href="#jobs" data-nav="jobs">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-      <span>Jobs</span>
-    </a>
     <a href="#notifications" data-nav="notifications">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
       </svg>
       <span>Alerts</span>
+    </a>
+    <a href="#profile" data-nav="profile">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" />
+      </svg>
+      <span>Profile</span>
     </a>
   </nav>
 
