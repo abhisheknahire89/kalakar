@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>KALAKAAR</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     /* ────────────────────────────────────────────────────────────────────────
        DESIGN TOKENS & RESET
@@ -286,8 +287,10 @@
   <!-- 4. FEED (Stage) -->
   <div id="screen-stage" class="screen" style="padding: 0;">
     <div style="padding: 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: rgba(11,11,12,0.9); backdrop-filter: blur(10px); z-index: 10;">
-      <h2 style="font-size: 20px;">Stage</h2>
-      <div style="font-size: 20px;" onclick="switchTab('notifications')">🔔</div>
+      <h2 style="font-size: 20px; color: var(--gold);">KALAKAAR</h2>
+      <div style="font-size: 20px; color: var(--muted); cursor: pointer;" onclick="navigate('deal-room')">
+        <i class="fa-solid fa-comment-dots"></i>
+      </div>
     </div>
 
     <div id="feed-container" style="padding: 0 16px;">
@@ -392,11 +395,11 @@
 
   <!-- BOTTOM NAV (Always visible when logged in) -->
   <div id="bottom-nav" class="bottom-nav" style="display: none;">
-    <div class="nav-item active" onclick="switchTab('stage')">🏠</div>
-    <div class="nav-item" onclick="switchTab('explore')">🔍</div>
-    <div class="fab" onclick="openCreateModal()">+</div>
-    <div class="nav-item" onclick="switchTab('notifications')">🔔</div>
-    <div class="nav-item" onclick="switchTab('profile')">👤</div>
+    <div class="nav-item active" onclick="switchTab('stage')"><i class="fa-solid fa-house"></i></div>
+    <div class="nav-item" onclick="switchTab('explore')"><i class="fa-solid fa-user-group"></i></div>
+    <div class="fab" onclick="openCreateModal()"><i class="fa-solid fa-plus"></i></div>
+    <div class="nav-item" onclick="switchTab('notifications')"><i class="fa-solid fa-bell"></i></div>
+    <div class="nav-item" onclick="switchTab('profile')"><i class="fa-solid fa-circle-user"></i></div>
   </div>
 
   <!-- NUDGE MODAL -->
@@ -475,12 +478,19 @@
 
   onAuthStateChanged(auth, async (user) => {
     if (user && !window.isGuest) {
-      const docSnap = await getDoc(doc(db, "users", user.uid));
-      if (docSnap.exists()) {
-        window.currentUser = docSnap.data();
-        updateProfileUI();
-        window.loginSuccess();
-      } else {
+      try {
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        if (docSnap.exists()) {
+          window.currentUser = docSnap.data();
+          updateProfileUI();
+          window.loginSuccess();
+        } else {
+          document.getElementById('ob-name').value = user.displayName || "";
+          navigate('onboarding-creator');
+        }
+      } catch (err) {
+        console.error("Firestore error:", err);
+        // Fallback to onboarding if permission denied or doc doesn't exist
         document.getElementById('ob-name').value = user.displayName || "";
         navigate('onboarding-creator');
       }
@@ -584,7 +594,12 @@
       posts: 0, followers: 0, following: 0
     };
     
-    await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), data);
+    try {
+      await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), data);
+    } catch (e) {
+      console.error("Failed to save profile. Proceeding anyway for demo.", e);
+    }
+    
     window.currentUser = data;
     updateProfileUI();
     loginSuccess();
