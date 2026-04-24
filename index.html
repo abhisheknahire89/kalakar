@@ -491,61 +491,88 @@
   window.getDoc = getDoc;
   window.serverTimestamp = serverTimestamp;
 
-  // Store deep links before auth
-  if (!window.firebaseAuth?.currentUser && window.location.hash) {
+  // Capture deep-link destination BEFORE auth resolves
+  if (window.location.hash && window.location.hash.length > 1) {
     localStorage.setItem('intendedDestination', window.location.hash);
+    console.log('[DEEPLINK] Captured intended destination:', window.location.hash);
   }
 
-
-
   onAuthStateChanged(auth, async (user) => {
+    console.log('[AUTH] onAuthStateChanged fired. user:', user?.uid || 'null');
+
     if (user && !window.isGuest) {
       try {
+        console.log('[AUTH] Fetching Firestore doc for uid:', user.uid);
         const docSnap = await getDoc(doc(db, "users", user.uid));
-        
-        let userData = null;
+        console.log('[AUTH] docSnap exists:', docSnap.exists());
+
+        let userData;
         if (docSnap.exists()) {
           userData = docSnap.data();
         } else {
-          // Immediately create DB record for new user
+          // NEW USER — create document immediately before any navigation
           userData = {
             uid: user.uid,
-            email: user.email,
+            email: user.email || "",
             displayName: user.displayName || "",
             photoURL: user.photoURL || "",
-            createdAt: window.serverTimestamp(),
+            createdAt: serverTimestamp(),
             onboardingComplete: false,
             onboardingStep: 0,
             intendedDestination: localStorage.getItem('intendedDestination') || null
           };
+          console.log('[AUTH] New user — writing initial doc to Firestore');
           await setDoc(doc(db, "users", user.uid), userData, { merge: true });
+          console.log('[AUTH] New user doc written successfully');
         }
-        
+
         window.currentUser = userData;
+        console.log('[AUTH] onboardingComplete:', userData.onboardingComplete);
+        console.log('[AUTH] onboardingStep:', userData.onboardingStep);
 
         if (userData.onboardingComplete === false) {
-          document.getElementById('ob-name').value = user.displayName || "";
+          const step = userData.onboardingStep || parseInt(localStorage.getItem('onboardingStep') || '0');
+          console.log('[AUTH] Routing to onboarding, resuming at step:', step);
+
+          // Pre-fill name from Google profile
+          const nameEl = document.getElementById('ob-name');
+          if (nameEl) nameEl.value = userData.displayName || user.displayName || '';
+
           navigate('onboarding-creator');
-          const step = userData.onboardingStep || parseInt(localStorage.getItem('onboardingStep') || "0");
-          if (step === 1) {
-            document.getElementById('onboard-step-1').style.display='none';
-            document.getElementById('onboard-step-2').style.display='block';
+
+          // Show correct step without relying on navigate()
+          const s1 = document.getElementById('onboard-step-1');
+          const s2 = document.getElementById('onboard-step-2');
+          if (step >= 1) {
+            if (s1) s1.style.display = 'none';
+            if (s2) s2.style.display = 'block';
           } else {
-            document.getElementById('onboard-step-1').style.display='block';
-            document.getElementById('onboard-step-2').style.display='none';
+            if (s1) s1.style.display = 'block';
+            if (s2) s2.style.display = 'none';
           }
         } else {
           updateProfileUI();
-          if (userData.intendedDestination) {
+          // Onboarding complete — resolve deep link if present
+          const dest = userData.intendedDestination;
+          if (dest) {
+            console.log('[AUTH] Routing to intendedDestination:', dest);
             await setDoc(doc(db, "users", user.uid), { intendedDestination: null }, { merge: true });
+            window.currentUser.intendedDestination = null;
+            localStorage.removeItem('intendedDestination');
+            // For now navigate to stage (extend when deep link screens exist)
+            window.loginSuccess();
+          } else {
+            console.log('[AUTH] Routing to stage (no deep link)');
+            window.loginSuccess();
           }
-          window.loginSuccess();
         }
       } catch (err) {
-        console.error("Firestore error:", err);
-        navigate('onboarding-creator');
+        console.error('[AUTH] Firestore error:', err);
+        showToast('Connection error. Please check your network.');
+        navigate('login');
       }
     } else {
+      console.log('[AUTH] No user — routing to login');
       navigate('login');
     }
   });
@@ -592,10 +619,10 @@
      UI LOGIC
      ──────────────────────────────────────────────────────────────────────── */
   function navigate(screenId) {
-    // 1. Strict Onboarding Gatekeeper
+    console.log('[NAV] navigate called with screen:', screenId);
     if (window.firebaseAuth && window.firebaseAuth.currentUser && !window.isGuest) {
       if (window.currentUser && window.currentUser.onboardingComplete === false && screenId !== 'onboarding-creator' && screenId !== 'login') {
-        console.warn("Onboarding incomplete. Blocking navigation to " + screenId);
+        console.warn('[NAV] Blocked navigation to', screenId, '— onboarding incomplete. Redirecting to onboarding-creator.');
         screenId = 'onboarding-creator';
       }
     }
@@ -603,7 +630,6 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-' + screenId).classList.add('active');
 
-    // 2. Resume step if navigating to onboarding
     if (screenId === 'onboarding-creator' && window.currentUser) {
       const savedStep = window.currentUser.onboardingStep || parseInt(localStorage.getItem('onboardingStep') || "0");
       if (savedStep === 1) {
@@ -615,7 +641,6 @@
       }
     }
 
-    // Manage bottom nav visibility
     const hideNavScreens = ['loading', 'login', 'onboarding-creator', 'onboarding-guest', 'post-detail', 'deal-room'];
     const bottomNav = document.getElementById('bottom-nav');
     if (bottomNav) {
@@ -670,66 +695,120 @@
   }
 
   async function nextOnboardingStep() {
-    const user = window.firebaseAuth.currentUser;
+    const user = window.firebaseAuth?.currentUser;
     const roleChip = document.querySelector('#role-selector .chip.active');
+
     if (!roleChip) {
-      // Shake the role selector to show it's required
+      // Visual shake + red outline on role selector
       const rs = document.getElementById('role-selector');
       rs.style.transition = 'transform 0.1s';
+      rs.style.outline = '2px solid #ef4444';
+      rs.style.borderRadius = '8px';
+      rs.style.padding = '4px';
       rs.style.transform = 'translateX(8px)';
       setTimeout(() => rs.style.transform = 'translateX(-8px)', 100);
       setTimeout(() => rs.style.transform = 'translateX(6px)', 200);
       setTimeout(() => rs.style.transform = 'translateX(-6px)', 300);
-      setTimeout(() => rs.style.transform = 'translateX(0)', 400);
-      rs.style.outline = '2px solid #ef4444';
-      rs.style.borderRadius = '8px';
-      rs.style.padding = '4px';
-      showToast("👆 Tap a role to continue");
+      setTimeout(() => { rs.style.transform = 'translateX(0)'; }, 400);
+      showToast('👆 Please select your role to continue');
       return;
     }
-    if (!user) { showToast("Authentication error. Please login again."); return; }
-    
-    document.getElementById('onboard-step-1').style.display='none';
-    document.getElementById('onboard-step-2').style.display='block';
-    
+
+    if (!user) {
+      showToast('Session expired. Please log in again.');
+      navigate('login');
+      return;
+    }
+
+    const selectedRole = roleChip.innerText.trim();
+    const enteredName = (document.getElementById('ob-name')?.value || '').trim();
+    console.log('[ONBOARD] Step 1 submitted. role:', selectedRole, '| name:', enteredName);
+
+    // Advance UI immediately so user sees progress
+    document.getElementById('onboard-step-1').style.display = 'none';
+    document.getElementById('onboard-step-2').style.display = 'block';
+
+    // Persist step to localStorage as backup
     localStorage.setItem('onboardingStep', '1');
+
+    // Update in-memory state
     if (window.currentUser) {
       window.currentUser.onboardingStep = 1;
-      window.currentUser.role = roleChip.innerText;
-      window.currentUser.name = document.getElementById('ob-name').value;
-      try {
-        await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), {
-          onboardingStep: 1,
-          role: roleChip.innerText,
-          name: document.getElementById('ob-name').value
-        }, { merge: true });
-      } catch(e) {}
+      window.currentUser.role = selectedRole;
+      window.currentUser.name = enteredName;
+    }
+
+    // Write to Firestore (fire-and-forget with error logging)
+    try {
+      await window.setDoc(window.doc(window.firebaseDb, 'users', user.uid), {
+        onboardingStep: 1,
+        role: selectedRole,
+        name: enteredName
+      }, { merge: true });
+      console.log('[ONBOARD] Firestore write: success (step 1)');
+    } catch (e) {
+      console.error('[ONBOARD] Firestore write failed (step 1):', e);
+      showToast('Progress saved locally. Will sync when online.');
     }
   }
 
+  let _onboardingSubmitting = false;
   async function completeOnboarding() {
-    const user = window.firebaseAuth.currentUser;
-    if (!user) return;
-    
-    const initials = (user.displayName || "US").substring(0,2).toUpperCase();
-    const data = {
-      initials: initials,
-      color: "#D4AF37",
-      posts: 0, followers: 0, following: 0,
-      onboardingComplete: true,
-      onboardingStep: 1
-    };
-    
-    try {
-      await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), data, { merge: true });
-    } catch (e) {
-      console.error("Failed to save profile.", e);
+    // Debounce — prevent double-submit
+    if (_onboardingSubmitting) {
+      console.warn('[ONBOARD] completeOnboarding() called while already submitting — ignored');
+      return;
     }
-    
+    _onboardingSubmitting = true;
+
+    const btn = document.querySelector('#onboard-step-2 .btn-gold');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+    const user = window.firebaseAuth?.currentUser;
+    if (!user) {
+      showToast('Session expired. Please log in again.');
+      navigate('login');
+      _onboardingSubmitting = false;
+      return;
+    }
+
+    const nameVal = (document.getElementById('ob-name')?.value || window.currentUser?.name || user.displayName || '').trim();
+    const initials = nameVal.length >= 2
+      ? (nameVal.split(' ').map(w => w[0]).join('').substring(0, 2)).toUpperCase()
+      : (user.displayName || 'KL').substring(0, 2).toUpperCase();
+
+    const data = {
+      onboardingComplete: true,
+      onboardingStep: 1,
+      initials,
+      color: '#D4AF37',
+      posts: 0,
+      followers: 0,
+      following: 0,
+      intendedDestination: null
+    };
+
+    console.log('[ONBOARD] Step 2 complete — writing to Firestore:', data);
+
+    try {
+      await window.setDoc(window.doc(window.firebaseDb, 'users', user.uid), data, { merge: true });
+      console.log('[ONBOARD] Firestore write: success (completion)');
+    } catch (e) {
+      console.error('[ONBOARD] Firestore write failed (completion):', e);
+      showToast('Could not save profile. Please check your connection and try again.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Enter Kalakaar →'; }
+      _onboardingSubmitting = false;
+      return;
+    }
+
     localStorage.removeItem('onboardingStep');
+    localStorage.removeItem('intendedDestination');
     window.currentUser = { ...window.currentUser, ...data };
     updateProfileUI();
+
+    console.log('[ONBOARD] Calling loginSuccess()');
     window.loginSuccess();
+    _onboardingSubmitting = false;
   }
 
   function loginAsGuest() {
@@ -740,9 +819,11 @@
   }
 
   function loginSuccess() {
+    console.log('[NAV] loginSuccess called — navigating to stage');
     navigate('stage');
+    console.log('[NAV] renderFeed() called');
     renderFeed();
-    // Sync nav active state
+    // Sync bottom nav — highlight Stage
     const tabOrder = ['stage', 'explore', null, 'notifications', 'profile'];
     document.querySelectorAll('.nav-item').forEach((el, i) => {
       el.classList.toggle('active', tabOrder[i] === 'stage');
@@ -761,10 +842,10 @@
 
   /* MAIN APP LOGIC */
   function switchTab(tab) {
+    console.log('[NAV] switchTab called with tab:', tab);
     if (tab === 'explore') renderExplore();
     if (tab === 'notifications') renderNotifs();
     
-    // Update nav item active state by index
     const tabOrder = ['stage', 'explore', null, 'notifications', 'profile'];
     document.querySelectorAll('.nav-item').forEach((el, i) => {
       el.classList.toggle('active', tabOrder[i] === tab);
