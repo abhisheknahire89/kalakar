@@ -236,7 +236,7 @@
         <div class="chip" onclick="selectRole(this)">Writer</div>
       </div>
       
-      <button class="btn btn-gold" style="margin-top: 32px;" onclick="document.getElementById('onboard-step-1').style.display='none'; document.getElementById('onboard-step-2').style.display='block';">Next Step →</button>
+      <button class="btn btn-gold" style="margin-top: 32px;" onclick="localStorage.setItem('onboardingStep', '2'); document.getElementById('onboard-step-1').style.display='none'; document.getElementById('onboard-step-2').style.display='block';">Next Step →</button>
     </div>
 
     <div id="onboard-step-2" style="display: none;">
@@ -450,7 +450,7 @@
 <!-- Firebase Modular SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -476,6 +476,15 @@
   window.getDoc = getDoc;
   window.serverTimestamp = serverTimestamp;
 
+  getRedirectResult(auth).then((result) => {
+    if (result) {
+      console.log("Successfully redirected back from Google:", result.user);
+    }
+  }).catch((error) => {
+    console.error("Redirect Error:", error);
+    showToast("Google sign-in failed. Please try again.");
+  });
+
   onAuthStateChanged(auth, async (user) => {
     if (user && !window.isGuest) {
       try {
@@ -487,12 +496,25 @@
         } else {
           document.getElementById('ob-name').value = user.displayName || "";
           navigate('onboarding-creator');
+          
+          // Resume onboarding step if saved
+          const savedStep = localStorage.getItem('onboardingStep');
+          if (savedStep === '2') {
+            document.getElementById('onboard-step-1').style.display='none';
+            document.getElementById('onboard-step-2').style.display='block';
+          }
         }
       } catch (err) {
         console.error("Firestore error:", err);
         // Fallback to onboarding if permission denied or doc doesn't exist
         document.getElementById('ob-name').value = user.displayName || "";
         navigate('onboarding-creator');
+        
+        const savedStep = localStorage.getItem('onboardingStep');
+        if (savedStep === '2') {
+          document.getElementById('onboard-step-1').style.display='none';
+          document.getElementById('onboard-step-2').style.display='block';
+        }
       }
     }
   });
@@ -599,6 +621,8 @@
     } catch (e) {
       console.error("Failed to save profile. Proceeding anyway for demo.", e);
     }
+    
+    localStorage.removeItem('onboardingStep'); // Clear onboarding state on success
     
     window.currentUser = data;
     updateProfileUI();
