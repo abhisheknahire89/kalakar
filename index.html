@@ -238,7 +238,8 @@
       
       <input type="text" id="ob-name" class="input" placeholder="Your Full Name">
       
-      <h3 style="margin: 16px 0 12px; font-size: 16px;">I am a...</h3>
+      <h3 style="margin: 16px 0 4px; font-size: 16px;">I am a... <span style="color: #ef4444; font-size: 12px;">* required</span></h3>
+      <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">Tap one to continue</p>
       <div id="role-selector">
         <div class="chip" onclick="selectRole(this)">Actor</div>
         <div class="chip" onclick="selectRole(this)">Editor</div>
@@ -671,7 +672,22 @@
   async function nextOnboardingStep() {
     const user = window.firebaseAuth.currentUser;
     const roleChip = document.querySelector('#role-selector .chip.active');
-    if (!user || !roleChip) { showToast("Please select a role."); return; }
+    if (!roleChip) {
+      // Shake the role selector to show it's required
+      const rs = document.getElementById('role-selector');
+      rs.style.transition = 'transform 0.1s';
+      rs.style.transform = 'translateX(8px)';
+      setTimeout(() => rs.style.transform = 'translateX(-8px)', 100);
+      setTimeout(() => rs.style.transform = 'translateX(6px)', 200);
+      setTimeout(() => rs.style.transform = 'translateX(-6px)', 300);
+      setTimeout(() => rs.style.transform = 'translateX(0)', 400);
+      rs.style.outline = '2px solid #ef4444';
+      rs.style.borderRadius = '8px';
+      rs.style.padding = '4px';
+      showToast("👆 Tap a role to continue");
+      return;
+    }
+    if (!user) { showToast("Authentication error. Please login again."); return; }
     
     document.getElementById('onboard-step-1').style.display='none';
     document.getElementById('onboard-step-2').style.display='block';
@@ -727,7 +743,6 @@
     switchTab('stage');
     renderFeed();
   }
-  window.loginSuccess = loginSuccess;
 
   async function logout() {
     if (!window.isGuest) {

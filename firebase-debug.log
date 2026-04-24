@@ -1,0 +1,25 @@
+[debug] [2026-04-24T13:26:49.853Z] ----------------------------------------------------------------------
+[debug] [2026-04-24T13:26:49.863Z] Command:       /usr/local/bin/node /Users/abhishekpravinnahire/.npm/_npx/7750544ccf494d8b/node_modules/.bin/firebase deploy --only hosting --project kalakaar-demo
+[debug] [2026-04-24T13:26:49.879Z] CLI Version:   15.15.0
+[debug] [2026-04-24T13:26:49.879Z] Platform:      darwin
+[debug] [2026-04-24T13:26:49.879Z] Node Version:  v25.2.1
+[debug] [2026-04-24T13:26:49.880Z] Time:          Fri Apr 24 2026 18:56:49 GMT+0530 (India Standard Time)
+[debug] [2026-04-24T13:26:49.880Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-24T13:27:01.434Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-24T13:27:01.435Z] > authorizing via signed-in user (abhisheknahire89@gmail.com)
+[debug] [2026-04-24T13:27:01.435Z] [iam] checking project kalakaar-demo for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-04-24T13:27:01.437Z] Checked if tokens are valid: true, expires at: 1777040441577
+[debug] [2026-04-24T13:27:01.437Z] Checked if tokens are valid: true, expires at: 1777040441577
+[debug] [2026-04-24T13:27:01.439Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/kalakaar-demo:testIamPermissions [none]
+[debug] [2026-04-24T13:27:01.439Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/kalakaar-demo:testIamPermissions  x-goog-user-project=kalakaar-demo
+[debug] [2026-04-24T13:27:01.439Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/kalakaar-demo:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-04-24T13:27:01.485Z] *** [apiv2] error from fetch(https://cloudresourcemanager.googleapis.com/v1/projects/kalakaar-demo:testIamPermissions, {"headers":{},"method":"POST","body":"{\"permissions\":[\"firebase.projects.get\",\"firebasehosting.sites.update\"]}"}): FetchError: request to https://cloudresourcemanager.googleapis.com/v1/projects/kalakaar-demo:testIamPermissions failed, reason: getaddrinfo ENOTFOUND cloudresourcemanager.googleapis.com
+[debug] [2026-04-24T13:27:01.486Z] [iam] error while checking permissions, command may fail: Failed to make request to https://cloudresourcemanager.googleapis.com/v1/projects/kalakaar-demo:testIamPermissions
+[debug] [2026-04-24T13:27:01.487Z] Checked if tokens are valid: true, expires at: 1777040441577
+[debug] [2026-04-24T13:27:01.487Z] Checked if tokens are valid: true, expires at: 1777040441577
+[debug] [2026-04-24T13:27:01.487Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/kalakaar-demo [none]
+[debug] [2026-04-24T13:27:01.493Z] *** [apiv2] error from fetch(https://firebase.googleapis.com/v1beta1/projects/kalakaar-demo, {"headers":{},"method":"GET","signal":{"reason":""}}): FetchError: request to https://firebase.googleapis.com/v1beta1/projects/kalakaar-demo failed, reason: getaddrinfo ENOTFOUND firebase.googleapis.com
+[debug] [2026-04-24T13:27:01.493Z] Failed to make request to https://firebase.googleapis.com/v1beta1/projects/kalakaar-demo (original: request to https://firebase.googleapis.com/v1beta1/projects/kalakaar-demo failed, reason: getaddrinfo ENOTFOUND firebase.googleapis.com)
+[error] 
+[error] Error: Assertion failed: resolving hosting target of a site with no site name or target name. This should have caused an error earlier
