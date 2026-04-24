@@ -536,19 +536,15 @@
         } else {
           updateProfileUI();
           if (userData.intendedDestination) {
-            const dest = userData.intendedDestination;
             await setDoc(doc(db, "users", user.uid), { intendedDestination: null }, { merge: true });
-            navigate('stage'); // update when deep links are built
-          } else {
-            navigate('stage');
           }
+          window.loginSuccess();
         }
       } catch (err) {
         console.error("Firestore error:", err);
         navigate('onboarding-creator');
       }
     } else {
-      // User is fully logged out or initialized
       navigate('login');
     }
   });
@@ -711,19 +707,13 @@
     try {
       await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), data, { merge: true });
     } catch (e) {
-      console.error("Failed to save profile. Proceeding anyway for demo.", e);
+      console.error("Failed to save profile.", e);
     }
     
-    localStorage.removeItem('onboardingStep'); // Clear onboarding state on success
-    
+    localStorage.removeItem('onboardingStep');
     window.currentUser = { ...window.currentUser, ...data };
     updateProfileUI();
-    
-    if (window.currentUser.intendedDestination) {
-       await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), { intendedDestination: null }, { merge: true });
-    }
-    
-    navigate('stage');
+    window.loginSuccess();
   }
 
   function loginAsGuest() {
@@ -847,12 +837,10 @@
 
   function renderFeed() {
     const container = document.getElementById('feed-container');
-    container.innerHTML = ''; 
-    setTimeout(() => {
-      let html = '';
-      POSTS.forEach(p => { html += renderPostHtml(p); });
-      container.innerHTML = html;
-    }, 1200);
+    container.innerHTML = '';
+    let html = '';
+    POSTS.forEach(p => { html += renderPostHtml(p); });
+    container.innerHTML = html;
   }
 
   function renderExplore() {
