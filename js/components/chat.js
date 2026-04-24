@@ -1,304 +1,319 @@
-import { createDeal, listDeals, listMessages, sendMessage, updateDealStatus, createAutoReply, getProfileById, getProfileSnapshot, getRelativeTime } from '../services/appData.js';
-import { navigateTo } from '../router.js';
+import { databases, Query, ID, client, storage, DATABASE_ID, COLLECTIONS, BUCKETS } from '../appwriteClient.js';
+import { StorageServiceInstance as StorageService, setView } from './core.js';
+import { openContractBuilder, initContractBuilder, renderDealMemoCard } from './contractBuilder.js';
 import { showToast } from './toast.js';
 
-let activeDealId = '';
-let activeTargetProfileId = '';
-let chatBound = false;
-let hireModalBound = false;
+const chatWindow = document.querySelector('#chat-window');
+const chatList = document.querySelector('#chat-list');
+const chatInput = document.querySelector('#chat-message-input');
+const chatHeader = document.querySelector('#chat-header');
+const chatEmptyState = document.querySelector('#chat-empty-state');
+const chatInputArea = document.querySelector('#chat-input-area');
+const chatUserName = document.querySelector('#chat-user-name');
+const chatUserAvatar = document.querySelector('#chat-user-avatar');
+const sendMsgBtn = document.querySelector('#send-msg-btn');
+const initiateContractBtn = document.querySelector('#initiate-contract-btn');
+const CONVERSATIONS_COLLECTION = COLLECTIONS.CONVERSATIONS || COLLECTIONS.conversations;
+const MESSAGES_COLLECTION = COLLECTIONS.MESSAGES || COLLECTIONS.messages;
+const CREATORS_COLLECTION = COLLECTIONS.CREATORS || COLLECTIONS.creators;
+const CONTRACTS_COLLECTION = COLLECTIONS.CONTRACTS || COLLECTIONS.contracts;
+const AVATAR_BUCKET = BUCKETS.AVATARS || BUCKETS.avatars;
 
-function ensureHireModal() {
-  let modal = document.getElementById('hire-flow-modal');
-  if (modal) return modal;
-
-  modal = document.createElement('div');
-  modal.id = 'hire-flow-modal';
-  modal.className = 'modal-overlay hidden';
-  modal.innerHTML = `
-    <div class="modal-content panel beta-hire-modal">
-      <header class="beta-composer-header">
-        <div>
-          <p class="beta-kicker">Deal flow</p>
-          <h2>Start a thread</h2>
-        </div>
-        <button class="ghost small" id="hire-flow-close-btn">Close</button>
-      </header>
-
-      <div id="hire-flow-target" class="beta-hire-target"></div>
-
-      <div class="beta-intent-grid">
-        <button class="beta-intent-btn active" data-intent="hire">Hire</button>
-        <button class="beta-intent-btn" data-intent="collaborate">Collaborate</button>
-        <button class="beta-intent-btn" data-intent="message">Message</button>
-      </div>
-
-      <textarea id="hire-flow-note" class="beta-composer-textarea" placeholder="Give a little context so the other person knows what this is about."></textarea>
-
-      <div class="beta-composer-actions">
-        <button class="ghost" id="hire-flow-cancel-btn">Cancel</button>
-        <button class="primary action-gold" id="hire-flow-submit-btn">Open deal room</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-  return modal;
-}
-
-function getSelectedIntent() {
-  return document.querySelector('.beta-intent-btn.active')?.dataset.intent || 'hire';
-}
-
-function bindHireModal() {
-  if (hireModalBound) return;
-  hireModalBound = true;
-
-  const modal = ensureHireModal();
-  const close = () => {
-    modal.classList.add('hidden');
-    activeTargetProfileId = '';
-  };
-
-  modal.addEventListener('click', (event) => {
-    if (event.target === modal) close();
-  });
-
-  document.getElementById('hire-flow-close-btn')?.addEventListener('click', close);
-  document.getElementById('hire-flow-cancel-btn')?.addEventListener('click', close);
-
-  modal.addEventListener('click', (event) => {
-    const button = event.target.closest('.beta-intent-btn');
-    if (!button) return;
-    modal.querySelectorAll('.beta-intent-btn').forEach((node) => node.classList.remove('active'));
-    button.classList.add('active');
-  });
-
-  document.getElementById('hire-flow-submit-btn')?.addEventListener('click', async () => {
-    const submit = document.getElementById('hire-flow-submit-btn');
-    const note = document.getElementById('hire-flow-note')?.value || '';
-
-    submit.disabled = true;
-    submit.textContent = 'Opening...';
-
-    try {
-      const deal = await createDeal({
-        targetProfileId: activeTargetProfileId,
-        intent: getSelectedIntent(),
-        note
-      });
-      close();
-      activeDealId = deal.$id;
-      await renderChatList();
-      navigateTo('deal-room');
-    } catch (error) {
-      showToast(error?.message || 'Could not start the deal flow.', 'danger');
-    } finally {
-      submit.disabled = false;
-      submit.textContent = 'Open deal room';
-    }
-  });
-}
-
-function bindChatEvents() {
-  if (chatBound) return;
-  chatBound = true;
-
-  const root = document.getElementById('messages-view');
-  if (!root) return;
-
-  root.addEventListener('click', async (event) => {
-    const dealButton = event.target.closest('[data-deal-id]');
-    if (dealButton && dealButton.dataset.dealAction === 'open') {
-      activeDealId = dealButton.dataset.dealId;
-      await renderChatList();
-      return;
-    }
-
-    const statusButton = event.target.closest('[data-status-action]');
-    if (statusButton) {
-      await updateDealStatus(activeDealId, statusButton.dataset.statusAction);
-      await renderChatList();
-      return;
-    }
-  });
-
-  root.addEventListener('submit', async (event) => {
-    if (event.target.id !== 'deal-room-form') return;
-    event.preventDefault();
-
-    const input = document.getElementById('deal-room-input');
-    const text = input?.value || '';
-    if (!text.trim()) return;
-
-    await sendMessage(activeDealId, text);
-    input.value = '';
-    await renderChatList();
-  });
-}
-
-function dealStatusActions(deal, isOwner) {
-  if (deal.status === 'pending') {
-    return `
-      <button class="ghost small" data-status-action="${isOwner ? 'cancelled' : 'rejected'}">${isOwner ? 'Cancel' : 'Reject'}</button>
-      <button class="primary action-gold" data-status-action="active">${isOwner ? 'Mark active' : 'Accept'}</button>
-    `;
-  }
-
-  if (deal.status === 'active') {
-    return `
-      <button class="ghost small" data-status-action="pending">Pause</button>
-      <button class="primary action-gold" data-status-action="completed">Complete</button>
-    `;
-  }
-
-  return `
-    <button class="ghost small" disabled>${deal.status}</button>
-  `;
-}
-
-async function renderActiveDeal(deals) {
-  const activeDeal = deals.find((deal) => deal.$id === activeDealId) || deals[0] || null;
-  const chatMain = document.getElementById('chat-main-area');
-  if (!chatMain) return;
-
-  if (!activeDeal) {
-    chatMain.innerHTML = `
-      <div class="beta-empty panel beta-chat-empty">
-        <h3>No deal rooms yet</h3>
-        <p class="meta">Hire, collaborate, or message someone from the feed or explore.</p>
-      </div>
-    `;
-    return;
-  }
-
-  activeDealId = activeDeal.$id;
-  const messages = await listMessages(activeDeal.$id);
-  await createAutoReply(activeDeal);
-  const refreshedMessages = await listMessages(activeDeal.$id);
-  const currentProfile = getProfileSnapshot();
-  const isOwner = activeDeal.ownerId === currentProfile?.$id;
-
-  chatMain.innerHTML = `
-    <div class="beta-chat-header panel">
-      <div class="beta-chat-headline">
-        <img class="beta-avatar" src="${activeDeal.counterpart.avatarUrl}" alt="${activeDeal.counterpart.name}" />
-        <div>
-          <strong>${activeDeal.counterpart.name}</strong>
-          <p class="meta">${activeDeal.intent} · ${activeDeal.status}</p>
-        </div>
-      </div>
-      <div class="beta-card-actions">
-        ${dealStatusActions(activeDeal, isOwner)}
-      </div>
-    </div>
-
-    <div class="beta-chat-thread panel">
-      ${refreshedMessages.length ? refreshedMessages.map((message) => `
-        <div class="beta-message ${message.senderId === currentProfile?.$id ? 'is-mine' : ''}">
-          <div class="beta-message-bubble">
-            <p>${message.text}</p>
-            <span>${getRelativeTime(message.createdAt)}</span>
-          </div>
-        </div>
-      `).join('') : `
-        <div class="beta-empty">
-          <h3>Deal room opened</h3>
-          <p class="meta">Send the first message to align on scope, dates, and next steps.</p>
-        </div>
-      `}
-    </div>
-
-    <form id="deal-room-form" class="beta-chat-form panel">
-      <input id="deal-room-input" type="text" placeholder="Send a message, update, or next step..." autocomplete="off" />
-      <button class="primary action-gold" type="submit">Send</button>
-    </form>
-  `;
-}
+let activeConversationId = null;
+let activeRecipientId = null;
+let unsubscribeMessages = null;
 
 export function initChatModule() {
-  bindChatEvents();
-  bindHireModal();
+  initContractBuilder(async (dealData) => {
+    // When a deal is built, create a contract doc and send a special message
+    try {
+        const contract = await databases.createDocument(
+            DATABASE_ID,
+            CONTRACTS_COLLECTION,
+            ID.unique(),
+            {
+                ...dealData,
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            }
+        );
+        sendMessage(null, 'contract', contract.$id);
+    } catch (error) {
+        showToast('Failed to create contract', 'danger');
+    }
+  });
+
+  sendMsgBtn?.addEventListener('click', () => {
+    const text = chatInput.value.trim();
+    if (text) {
+      sendMessage(text);
+      chatInput.value = '';
+    }
+  });
+
+  chatInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMsgBtn.click();
+  });
+
+  initiateContractBtn?.addEventListener('click', () => {
+    openContractBuilder();
+  });
 }
 
 export async function renderChatList() {
-  initChatModule();
-  const container = document.getElementById('messages-view');
-  if (!container) return;
+  if (!chatList) return;
+  const myProfile = StorageService.get('kalakar_user_profile');
+  if (!myProfile) return;
 
-  const deals = await listDeals();
+  chatList.innerHTML = '<div class="skeleton-container"></div>';
 
-  container.innerHTML = `
-    <section class="beta-deal-shell">
-      <div class="beta-feed-toolbar">
-        <div>
-          <p class="beta-kicker">Deal Room</p>
-          <h2>Hiring, collaboration, and creator chat</h2>
+  try {
+    const response = await databases.listDocuments(
+      DATABASE_ID,
+      CONVERSATIONS_COLLECTION,
+      [
+        Query.search('participantIds', myProfile.$id),
+        Query.orderDesc('updatedAt')
+      ]
+    );
+
+    chatList.innerHTML = '';
+    
+    for (const conv of response.documents) {
+      const recipientId = conv.participantIds.find(id => id !== myProfile.$id);
+      const recipient = await databases.getDocument(
+        DATABASE_ID,
+        CREATORS_COLLECTION,
+        recipientId
+      );
+
+      const item = document.createElement('div');
+      item.className = `chat-item ${activeConversationId === conv.$id ? 'active' : ''}`;
+      
+      const avatar = recipient.avatarFileId ? 
+        storage.getFilePreview(AVATAR_BUCKET, recipient.avatarFileId, 100).href : 
+        `https://i.pravatar.cc/100?u=${recipient.$id}`;
+
+      item.innerHTML = `
+        <img src="${avatar}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+        <div class="chat-item-info">
+          <h4>${recipient.name}</h4>
+          <p>${conv.lastMessage || 'Start a conversation...'}</p>
         </div>
-      </div>
-
-      <div class="beta-deal-layout">
-        <aside class="beta-deal-list panel">
-          ${deals.length ? deals.map((deal) => `
-            <button class="beta-deal-item ${deal.$id === activeDealId ? 'active' : ''}" data-deal-id="${deal.$id}" data-deal-action="open">
-              <img class="beta-avatar" src="${deal.counterpart.avatarUrl}" alt="${deal.counterpart.name}" />
-              <div>
-                <strong>${deal.counterpart.name}</strong>
-                <p class="meta">${deal.intent} · ${deal.latestMessage}</p>
-              </div>
-              <span class="meta">${getRelativeTime(deal.updatedAt || deal.createdAt)}</span>
-            </button>
-          `).join('') : `
-            <div class="beta-empty">
-              <h3>No active threads</h3>
-              <p class="meta">Open a hire or collaboration flow from the feed or explore.</p>
-            </div>
-          `}
-        </aside>
-        <div id="chat-main-area" class="beta-deal-main"></div>
-      </div>
-    </section>
-  `;
-
-  await renderActiveDeal(deals);
+        <div style="font-size: 0.7rem; color: var(--muted);">
+          ${formatTime(conv.updatedAt)}
+        </div>
+      `;
+      
+      item.onclick = () => openChat(recipientId);
+      chatList.appendChild(item);
+    }
+  } catch (error) {
+    console.warn('Chat list unavailable, using fallback messaging state.');
+  }
 }
 
-export async function openHireFlow(profileId) {
-  if (profileId === getProfileSnapshot()?.$id) {
-    showToast('Use the composer to publish your work. You do not need to hire yourself.', 'info');
-    return;
+export async function openChat(recipientId) {
+  const myProfile = StorageService.get('kalakar_user_profile');
+  if (!myProfile) return;
+
+  activeRecipientId = recipientId;
+  
+  try {
+    const recipient = await databases.getDocument(
+        DATABASE_ID,
+        CREATORS_COLLECTION,
+        recipientId
+    );
+
+    chatUserName.textContent = recipient.name;
+    const avatar = recipient.avatarFileId ? 
+        storage.getFilePreview(AVATAR_BUCKET, recipient.avatarFileId, 100).href : 
+        `https://i.pravatar.cc/100?u=${recipient.$id}`;
+    chatUserAvatar.src = avatar;
+
+    // 1. Find or Create Conversation
+    const response = await databases.listDocuments(
+        DATABASE_ID,
+        CONVERSATIONS_COLLECTION,
+        [
+            Query.search('participantIds', myProfile.$id),
+            Query.search('participantIds', recipientId)
+        ]
+    );
+
+    if (response.documents.length > 0) {
+        activeConversationId = response.documents[0].$id;
+    } else {
+        const newConv = await databases.createDocument(
+            DATABASE_ID,
+            CONVERSATIONS_COLLECTION,
+            ID.unique(),
+            {
+                participantIds: [myProfile.$id, recipientId],
+                lastMessage: '',
+                updatedAt: new Date().toISOString()
+            }
+        );
+        activeConversationId = newConv.$id;
+    }
+
+    chatHeader.classList.remove('hidden');
+    chatWindow.classList.remove('hidden');
+    chatInputArea.classList.remove('hidden');
+    chatEmptyState.classList.add('hidden');
+
+    renderMessages();
+    setupRealtime();
+    renderChatList();
+    setView('messages');
+
+  } catch (error) {
+    console.warn('Open chat fallback unavailable.');
+    showToast('Chat is temporarily unavailable.', 'info');
   }
+}
 
-  const profile = await getProfileById(profileId);
-  if (!profile) {
-    showToast('That creator profile is unavailable right now.', 'danger');
-    return;
-  }
+async function renderMessages() {
+  if (!activeConversationId) return;
+  chatWindow.innerHTML = '<div class="skeleton-container"></div>';
 
-  activeTargetProfileId = profileId;
-  bindHireModal();
-  const modal = ensureHireModal();
-  const target = document.getElementById('hire-flow-target');
-  const note = document.getElementById('hire-flow-note');
+  try {
+    const response = await databases.listDocuments(
+        DATABASE_ID,
+        MESSAGES_COLLECTION,
+        [
+            Query.equal('conversationId', activeConversationId),
+            Query.orderAsc('createdAt'),
+            Query.limit(50)
+        ]
+    );
 
-  if (target) {
-    target.innerHTML = `
-      <div class="beta-hire-card panel">
-        <img class="beta-avatar beta-avatar-lg" src="${profile.avatarUrl || `https://i.pravatar.cc/200?u=${encodeURIComponent(profile.$id)}`}" alt="${profile.name}" />
-        <div>
-          <strong>${profile.name}</strong>
-          <p class="meta">${profile.primaryCraft || profile.role || 'Creator'} · ${profile.city || 'India'}</p>
-        </div>
+    chatWindow.innerHTML = '';
+    const myProfile = StorageService.get('kalakar_user_profile');
+
+    for (const msg of response.documents) {
+        appendMessage(msg, myProfile.$id);
+    }
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  } catch (error) {
+    console.warn('Messages unavailable for this conversation.');
+    chatWindow.innerHTML = `
+      <div class="empty-state text-center" style="padding: 24px;">
+        <h3>Coming soon</h3>
+        <p class="meta">Messages will appear here once the connection is restored.</p>
       </div>
     `;
   }
-
-  if (note) note.value = '';
-  modal.classList.remove('hidden');
 }
 
-export async function openChat(profileId, intent = 'message') {
-  const deal = await createDeal({ targetProfileId: profileId, intent });
-  activeDealId = deal.$id;
-  await renderChatList();
-  navigateTo('deal-room');
+function appendMessage(msg, myId) {
+    const div = document.createElement('div');
+    div.className = `chat-message ${msg.senderId === myId ? 'sent' : 'received'}`;
+    
+    if (msg.type === 'contract' && msg.contractId) {
+        // Fetch contract and render card
+        div.innerHTML = '<div class="skeleton" style="height:200px; width:300px;"></div>';
+        div.style.background = 'transparent';
+        div.style.padding = '0';
+        fetchAndRenderContract(msg.contractId, div);
+    } else {
+        div.textContent = msg.text;
+    }
+    chatWindow.appendChild(div);
+}
+
+async function fetchAndRenderContract(contractId, container) {
+    try {
+        const contract = await databases.getDocument(
+            DATABASE_ID,
+            CONTRACTS_COLLECTION,
+            contractId
+        );
+        container.innerHTML = renderDealMemoCard(contract);
+        // Re-bind accept buttons
+        container.querySelectorAll('.accept-deal-btn').forEach(btn => {
+            btn.onclick = () => handleDealStatus(contractId, 'signed');
+        });
+    } catch (error) {
+        container.innerHTML = '<p class="meta">Contract unavailable.</p>';
+    }
+}
+
+async function sendMessage(text, type = 'text', contractId = null) {
+  if (!activeConversationId) return;
+  const myProfile = StorageService.get('kalakar_user_profile');
+
+  try {
+    const msg = await databases.createDocument(
+        DATABASE_ID,
+        MESSAGES_COLLECTION,
+        ID.unique(),
+        {
+            conversationId: activeConversationId,
+            senderId: myProfile.$id,
+            text: text || (type === 'contract' ? '📜 New Deal Memo' : ''),
+            type: type,
+            contractId: contractId,
+            createdAt: new Date().toISOString()
+        }
+    );
+
+    // Update conversation meta
+    await databases.updateDocument(
+        DATABASE_ID,
+        CONVERSATIONS_COLLECTION,
+        activeConversationId,
+        {
+            lastMessage: text || '📜 Deal Memo',
+            updatedAt: new Date().toISOString()
+        }
+    );
+
+    // appendMessage(msg, myProfile.$id); // Real-time will handle this if active
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  } catch (error) {
+    console.warn('Send message failed.');
+    showToast('Message could not be sent right now.', 'info');
+  }
+}
+
+function setupRealtime() {
+    if (unsubscribeMessages) unsubscribeMessages();
+
+    unsubscribeMessages = client.subscribe(
+        `databases.${DATABASE_ID}.collections.${MESSAGES_COLLECTION}.documents`,
+        (response) => {
+            const myProfile = StorageService.get('kalakar_user_profile');
+            const msg = response.payload;
+
+            if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+                if (msg.conversationId === activeConversationId) {
+                    appendMessage(msg, myProfile.$id);
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                }
+                renderChatList(); // Refresh sidebar for last message
+            }
+        }
+    );
+}
+
+async function handleDealStatus(contractId, newStatus) {
+    try {
+        await databases.updateDocument(
+            DATABASE_ID,
+            CONTRACTS_COLLECTION,
+            contractId,
+            { status: newStatus }
+        );
+        showToast('Deal status updated!', 'success');
+        renderMessages();
+    } catch (error) {
+        showToast('Update failed', 'danger');
+    }
+}
+
+function formatTime(isoStr) {
+  const date = new Date(isoStr);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }

@@ -2,6 +2,7 @@ import { databases, Query, ID, DATABASE_ID, COLLECTIONS } from '../appwriteClien
 import { StorageServiceInstance as StorageService } from './core.js';
 import { createKanbanBoard } from './kanban.js';
 import { showToast } from './toast.js';
+import { mockJobs, formatRelativeTime, mockCurrentProfile } from '../mockData.js';
 
 const recentJobsFeed = document.querySelector('#recent-jobs-feed');
 const featuredJobsCarousel = document.querySelector('#featured-jobs-carousel-content');
@@ -14,7 +15,7 @@ const JOBS_COLLECTION = COLLECTIONS.JOBS || COLLECTIONS.jobs;
 const APPLICATIONS_COLLECTION = COLLECTIONS.APPLICATIONS || COLLECTIONS.applications;
 
 export async function renderJobs(filter = 'all') {
-  const userProfile = StorageService.get('kalakar_user_profile');
+  const userProfile = StorageService.get('kalakar_user_profile') || mockCurrentProfile;
   if (!userProfile) {
     if (recentJobsFeed) recentJobsFeed.innerHTML = '<p class="text-center meta mt-4">Complete onboarding to access jobs.</p>';
     return;
@@ -45,7 +46,7 @@ export async function renderJobs(filter = 'all') {
     if (recentJobsFeed) recentJobsFeed.innerHTML = '';
 
     if (allJobs.length === 0) {
-        if (recentJobsFeed) recentJobsFeed.innerHTML = '<p class="text-center meta mt-4">No hiring calls found at the moment.</p>';
+        renderMockJobs(filter);
         return;
     }
 
@@ -71,8 +72,8 @@ export async function renderJobs(filter = 'all') {
     });
 
   } catch (error) {
-    console.error('Jobs error:', error);
-    if (recentJobsFeed) recentJobsFeed.innerHTML = '<p class="text-center meta">Failed to load casting calls.</p>';
+    console.warn('Jobs fallback to mock data.');
+    renderMockJobs(filter);
   }
 }
 
@@ -80,9 +81,7 @@ function createJobCard(job, isFeatured) {
   const card = document.createElement('div');
   card.className = isFeatured ? 'job-card' : 'job-card feed-item';
   
-  const created = new Date(job.createdAt);
-  const timeAgo = Math.floor((Date.now() - created) / 3600000);
-  const displayTime = timeAgo > 24 ? `${Math.floor(timeAgo/24)}d` : `${timeAgo}h`;
+  const displayTime = formatRelativeTime(job.createdAt || new Date().toISOString());
 
   card.innerHTML = `
     <div class="job-card__header">
@@ -90,13 +89,14 @@ function createJobCard(job, isFeatured) {
         <h3 class="job-card__title">${job.title}</h3>
         <p class="job-card__prod">${job.company} ${job.isVerified ? '<span style="color:var(--brand-gold);">✓</span>' : ''}</p>
       </div>
-      ${!isFeatured ? `<div style="font-size: 0.75rem; color: var(--muted);">${displayTime} ago</div>` : ''}
+      ${!isFeatured ? `<div style="font-size: 0.75rem; color: var(--muted);">${displayTime}</div>` : ''}
     </div>
     <div class="job-meta">
       <span class="job-meta__tag">${job.type}</span>
       <span class="job-meta__tag">${job.location}</span>
       ${job.isUrgent ? '<span class="job-meta__tag" style="color:var(--brand-gold); border-color:var(--brand-gold);">Urgent</span>' : ''}
     </div>
+    ${job.timeline ? `<p class="meta" style="margin-top:8px;">${job.timeline}</p>` : ''}
     <div style="display:flex; justify-content:space-between; margin-top: 16px; align-items:center;">
       <button class="ghost small view-applicants-btn" data-id="${job.$id}">Applicants</button>
       <button class="job-card__btn apply-job-btn" data-id="${job.$id}" style="margin:0; padding: 6px 16px;">Easy Apply</button>
@@ -147,7 +147,7 @@ export async function viewApplicants(jobId) {
     renderApplications(response.documents);
 
   } catch (error) {
-    console.error('Applicants error:', error);
+    console.warn('Applicants fallback unavailable.');
     showToast('Failed to load applicants', 'danger');
   }
 }
@@ -227,3 +227,28 @@ document.querySelector('.back-link')?.addEventListener('click', () => {
     applicantsSection.classList.add('hidden');
     renderJobs('all');
 });
+
+function renderMockJobs(filter = 'all') {
+    if (recentJobsFeed) recentJobsFeed.innerHTML = '';
+    if (featuredJobsCarousel) featuredJobsCarousel.innerHTML = '';
+    if (applicantsSection) applicantsSection.classList.add('hidden');
+
+    const jobs = mockJobs.filter((job) => {
+        if (filter === 'Acting' || filter === 'Crew') return job.roleType === filter;
+        return true;
+    });
+
+    if (jobs.length === 0) {
+        if (recentJobsFeed) recentJobsFeed.innerHTML = '<p class="text-center meta mt-4">No hiring calls found at the moment.</p>';
+        return;
+    }
+
+    jobs.slice(0, 8).forEach((job) => {
+        if (job.isUrgent && featuredJobsCarousel) {
+            featuredJobsCarousel.appendChild(createJobCard(job, true));
+        }
+        if (recentJobsFeed) {
+            recentJobsFeed.appendChild(createJobCard(job, false));
+        }
+    });
+}

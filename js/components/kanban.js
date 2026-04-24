@@ -80,7 +80,7 @@ export function createKanbanBoard(containerEl, { jobId, columns, onStatusChange 
         const card = createCard(app, talent);
         col.appendChild(card);
       } catch (err) {
-        console.error('Kanban card error:', err);
+        console.warn('Kanban card error:', err);
       }
     }
     

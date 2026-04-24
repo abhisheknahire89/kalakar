@@ -100,7 +100,7 @@ export function initVouchModal() {
         modal.classList.add('hidden');
 
     } catch (error) {
-        console.error('Vouch error:', error);
+        console.warn('Vouch error:', error);
         showToast('Vouch failed. Try again later.', 'danger');
     } finally {
         submitBtn.disabled = false;

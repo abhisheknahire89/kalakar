@@ -73,7 +73,7 @@ export async function sendPhoneOTP(phone) {
     const token = await account.createPhoneToken(ID.unique(), phone);
     return { success: true, userId: token.userId };
   } catch (error) {
-    console.error('Send OTP failed:', error);
+    console.warn('Send OTP failed:', error);
     // Handle specific errors
     if (error.code === 429) {
       return { success: false, error: 'Too many attempts. Please wait and try again.' };
@@ -93,7 +93,7 @@ export async function verifyPhoneOTP(userId, otp) {
     const session = await account.createSession(userId, otp);
     return { success: true, session };
   } catch (error) {
-    console.error('Verify OTP failed:', error);
+    console.warn('Verify OTP failed:', error);
     if (error.code === 401) {
       return { success: false, error: 'Invalid OTP. Please try again.' };
     }
@@ -198,7 +198,7 @@ export async function loginWithGoogle() {
     // NOTE: This function redirects the browser — code after this won't execute
     // The user will return to the success URL with an active session
   } catch (error) {
-    console.error('Google OAuth failed:', error);
+    console.warn('Google OAuth failed:', error);
     showToast('Google sign-in failed. Please try again.', 'error');
   }
 }
@@ -221,7 +221,7 @@ export async function loginWithGooglePopup() {
     // const session = await account.createSession(userId, secret);
     return result;
   } catch (error) {
-    console.error('Google OAuth popup failed:', error);
+    console.warn('Google OAuth popup failed:', error);
     showToast('Google sign-in failed. Please try again.', 'error');
   }
 }
@@ -264,7 +264,7 @@ export async function getCreatorProfile(userId) {
     ]);
     return result.documents.length > 0 ? result.documents[0] : null;
   } catch (error) {
-    console.error('Failed to fetch creator profile:', error);
+    console.warn('Failed to fetch creator profile:', error);
     return null;
   }
 }
@@ -277,7 +277,7 @@ export async function logout() {
     await account.deleteSession('current');
     return { success: true };
   } catch (error) {
-    console.error('Logout failed:', error);
+    console.warn('Logout failed:', error);
     return { success: false, error: 'Logout failed.' };
   }
 }
@@ -297,7 +297,7 @@ export async function sendPhoneOTP(phone) {
     const token = await account.createPhoneToken(ID.unique(), phone);
     return { success: true, userId: token.userId };
   } catch (error) {
-    console.error('Send OTP failed:', error);
+    console.warn('Send OTP failed:', error);
     if (error.code === 429) {
       return { success: false, error: 'Too many attempts. Wait 60 seconds and try again.' };
     }
@@ -318,7 +318,7 @@ export async function verifyPhoneOTP(userId, otp) {
     const session = await account.createSession(userId, otp);
     return { success: true, session };
   } catch (error) {
-    console.error('Verify OTP failed:', error);
+    console.warn('Verify OTP failed:', error);
     if (error.code === 401) {
       return { success: false, error: 'Invalid OTP code. Please check and try again.' };
     }
@@ -354,7 +354,7 @@ export function loginWithGoogle() {
     );
     // This redirects the browser — no code after this executes
   } catch (error) {
-    console.error('Google OAuth failed:', error);
+    console.warn('Google OAuth failed:', error);
   }
 }
 
@@ -406,7 +406,7 @@ export async function createCreatorProfile(profileData) {
 
     return { success: true, profile };
   } catch (error) {
-    console.error('Create profile failed:', error);
+    console.warn('Create profile failed:', error);
     return { success: false, error: 'Failed to create profile. Please try again.' };
   }
 }
@@ -419,7 +419,7 @@ export async function uploadAvatar(file) {
     const response = await storage.createFile(BUCKETS.AVATARS, ID.unique(), file);
     return { success: true, fileId: response.$id };
   } catch (error) {
-    console.error('Avatar upload failed:', error);
+    console.warn('Avatar upload failed:', error);
     return { success: false, error: 'Failed to upload photo.' };
   }
 }
@@ -1221,7 +1221,7 @@ async function init() {
 }
 
 init().catch(err => {
-  console.error('❌ Fatal error:', err);
+  console.warn('❌ Fatal error:', err);
   process.exit(1);
 });
 ```
