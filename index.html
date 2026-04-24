@@ -450,7 +450,7 @@
 <!-- Firebase Modular SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -469,7 +469,7 @@
   window.firebaseAuth = auth;
   window.firebaseDb = db;
   window.GoogleAuthProvider = GoogleAuthProvider;
-  window.signInWithRedirect = signInWithRedirect;
+  window.signInWithPopup = signInWithPopup;
   window.signOut = signOut;
   window.doc = doc;
   window.setDoc = setDoc;
@@ -481,14 +481,7 @@
     localStorage.setItem('intendedDestination', window.location.hash);
   }
 
-  getRedirectResult(auth).then((result) => {
-    if (result && result.user) {
-      console.log("Successfully redirected back from Google:", result.user);
-    }
-  }).catch((error) => {
-    console.error("Redirect Error:", error);
-    showToast("Google sign-in failed. Please try again.");
-  });
+
 
   onAuthStateChanged(auth, async (user) => {
     if (user && !window.isGuest) {
@@ -637,7 +630,7 @@
     if (provider === 'google') {
       try {
         const providerObj = new window.GoogleAuthProvider();
-        await window.signInWithRedirect(window.firebaseAuth, providerObj);
+        await window.signInWithPopup(window.firebaseAuth, providerObj);
       } catch (e) {
         showToast("Error signing in.");
       }
