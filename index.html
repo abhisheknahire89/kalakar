@@ -740,8 +740,13 @@
   }
 
   function loginSuccess() {
-    switchTab('stage');
+    navigate('stage');
     renderFeed();
+    // Sync nav active state
+    const tabOrder = ['stage', 'explore', null, 'notifications', 'profile'];
+    document.querySelectorAll('.nav-item').forEach((el, i) => {
+      el.classList.toggle('active', tabOrder[i] === 'stage');
+    });
   }
 
   async function logout() {
@@ -759,8 +764,11 @@
     if (tab === 'explore') renderExplore();
     if (tab === 'notifications') renderNotifs();
     
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    // Update nav item active state by index
+    const tabOrder = ['stage', 'explore', null, 'notifications', 'profile'];
+    document.querySelectorAll('.nav-item').forEach((el, i) => {
+      el.classList.toggle('active', tabOrder[i] === tab);
+    });
     navigate(tab);
   }
 
