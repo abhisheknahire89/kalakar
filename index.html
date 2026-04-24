@@ -447,7 +447,7 @@
 <!-- Firebase Modular SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -466,7 +466,7 @@
   window.firebaseAuth = auth;
   window.firebaseDb = db;
   window.GoogleAuthProvider = GoogleAuthProvider;
-  window.signInWithPopup = signInWithPopup;
+  window.signInWithRedirect = signInWithRedirect;
   window.signOut = signOut;
   window.doc = doc;
   window.setDoc = setDoc;
@@ -561,7 +561,7 @@
     if (provider === 'google') {
       try {
         const providerObj = new window.GoogleAuthProvider();
-        await window.signInWithPopup(window.firebaseAuth, providerObj);
+        await window.signInWithRedirect(window.firebaseAuth, providerObj);
       } catch (e) {
         showToast("Error signing in.");
       }
