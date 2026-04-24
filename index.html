@@ -236,7 +236,7 @@
         <div class="chip" onclick="selectRole(this)">Writer</div>
       </div>
       
-      <button class="btn btn-gold" style="margin-top: 32px;" onclick="localStorage.setItem('onboardingStep', '2'); document.getElementById('onboard-step-1').style.display='none'; document.getElementById('onboard-step-2').style.display='block';">Next Step →</button>
+      <button class="btn btn-gold" style="margin-top: 32px;" onclick="nextOnboardingStep()">Next Step →</button>
     </div>
 
     <div id="onboard-step-2" style="display: none;">
@@ -476,8 +476,13 @@
   window.getDoc = getDoc;
   window.serverTimestamp = serverTimestamp;
 
+  // Store deep links before auth
+  if (!window.firebaseAuth?.currentUser && window.location.hash) {
+    localStorage.setItem('intendedDestination', window.location.hash);
+  }
+
   getRedirectResult(auth).then((result) => {
-    if (result) {
+    if (result && result.user) {
       console.log("Successfully redirected back from Google:", result.user);
     }
   }).catch((error) => {
@@ -489,19 +494,50 @@
     if (user && !window.isGuest) {
       try {
         const docSnap = await getDoc(doc(db, "users", user.uid));
+        
+        let userData = null;
         if (docSnap.exists()) {
-          window.currentUser = docSnap.data();
-          updateProfileUI();
-          // Fully onboarded user -> Go to main app
-          navigate('stage');
+          userData = docSnap.data();
         } else {
+          // Immediately create DB record for new user
+          userData = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || "",
+            photoURL: user.photoURL || "",
+            createdAt: window.serverTimestamp(),
+            onboardingComplete: false,
+            onboardingStep: 0,
+            intendedDestination: localStorage.getItem('intendedDestination') || null
+          };
+          await setDoc(doc(db, "users", user.uid), userData, { merge: true });
+        }
+        
+        window.currentUser = userData;
+
+        if (userData.onboardingComplete === false) {
           document.getElementById('ob-name').value = user.displayName || "";
-          // New/Returning user with incomplete onboarding
           navigate('onboarding-creator');
+          const step = userData.onboardingStep || parseInt(localStorage.getItem('onboardingStep') || "0");
+          if (step === 1) {
+            document.getElementById('onboard-step-1').style.display='none';
+            document.getElementById('onboard-step-2').style.display='block';
+          } else {
+            document.getElementById('onboard-step-1').style.display='block';
+            document.getElementById('onboard-step-2').style.display='none';
+          }
+        } else {
+          updateProfileUI();
+          if (userData.intendedDestination) {
+            const dest = userData.intendedDestination;
+            await setDoc(doc(db, "users", user.uid), { intendedDestination: null }, { merge: true });
+            navigate('stage'); // update when deep links are built
+          } else {
+            navigate('stage');
+          }
         }
       } catch (err) {
         console.error("Firestore error:", err);
-        document.getElementById('ob-name').value = user.displayName || "";
         navigate('onboarding-creator');
       }
     }
@@ -551,7 +587,7 @@
   function navigate(screenId) {
     // 1. Strict Onboarding Gatekeeper
     if (window.firebaseAuth && window.firebaseAuth.currentUser && !window.isGuest) {
-      if (!window.currentUser && screenId !== 'onboarding-creator' && screenId !== 'login') {
+      if (window.currentUser && window.currentUser.onboardingComplete === false && screenId !== 'onboarding-creator' && screenId !== 'login') {
         console.warn("Onboarding incomplete. Blocking navigation to " + screenId);
         screenId = 'onboarding-creator';
       }
@@ -561,9 +597,9 @@
     document.getElementById('screen-' + screenId).classList.add('active');
 
     // 2. Resume step if navigating to onboarding
-    if (screenId === 'onboarding-creator') {
-      const savedStep = localStorage.getItem('onboardingStep');
-      if (savedStep === '2') {
+    if (screenId === 'onboarding-creator' && window.currentUser) {
+      const savedStep = window.currentUser.onboardingStep || parseInt(localStorage.getItem('onboardingStep') || "0");
+      if (savedStep === 1) {
         document.getElementById('onboard-step-1').style.display='none';
         document.getElementById('onboard-step-2').style.display='block';
       } else {
@@ -608,33 +644,58 @@
     }
   }
 
-  async function completeOnboarding() {
+  async function nextOnboardingStep() {
     const user = window.firebaseAuth.currentUser;
     const roleChip = document.querySelector('#role-selector .chip.active');
     if (!user || !roleChip) { showToast("Please select a role."); return; }
     
+    document.getElementById('onboard-step-1').style.display='none';
+    document.getElementById('onboard-step-2').style.display='block';
+    
+    localStorage.setItem('onboardingStep', '1');
+    if (window.currentUser) {
+      window.currentUser.onboardingStep = 1;
+      window.currentUser.role = roleChip.innerText;
+      window.currentUser.name = document.getElementById('ob-name').value;
+      try {
+        await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), {
+          onboardingStep: 1,
+          role: roleChip.innerText,
+          name: document.getElementById('ob-name').value
+        }, { merge: true });
+      } catch(e) {}
+    }
+  }
+
+  async function completeOnboarding() {
+    const user = window.firebaseAuth.currentUser;
+    if (!user) return;
+    
     const initials = (user.displayName || "US").substring(0,2).toUpperCase();
     const data = {
-      name: user.displayName,
-      email: user.email,
-      role: roleChip.innerText,
       initials: initials,
       color: "#D4AF37",
-      createdAt: window.serverTimestamp(),
-      posts: 0, followers: 0, following: 0
+      posts: 0, followers: 0, following: 0,
+      onboardingComplete: true,
+      onboardingStep: 1
     };
     
     try {
-      await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), data);
+      await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), data, { merge: true });
     } catch (e) {
       console.error("Failed to save profile. Proceeding anyway for demo.", e);
     }
     
     localStorage.removeItem('onboardingStep'); // Clear onboarding state on success
     
-    window.currentUser = data;
+    window.currentUser = { ...window.currentUser, ...data };
     updateProfileUI();
-    loginSuccess();
+    
+    if (window.currentUser.intendedDestination) {
+       await window.setDoc(window.doc(window.firebaseDb, "users", user.uid), { intendedDestination: null }, { merge: true });
+    }
+    
+    navigate('stage');
   }
 
   function loginAsGuest() {
