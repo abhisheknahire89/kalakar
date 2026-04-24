@@ -194,8 +194,16 @@
 
 <div id="app">
 
+  <!-- 0. LOADING SCREEN -->
+  <div id="screen-loading" class="screen active">
+    <div style="display: flex; height: 100vh; justify-content: center; align-items: center; flex-direction: column;">
+      <h1 style="color: var(--gold); font-size: 32px; margin-bottom: 16px; animation: pulse 1.5s infinite;">KALAKAAR</h1>
+      <p style="color: var(--muted);">Loading your stage...</p>
+    </div>
+  </div>
+
   <!-- 1. LOGIN SCREEN -->
-  <div id="screen-login" class="screen active">
+  <div id="screen-login" class="screen">
     <div style="text-align: center; margin-bottom: 40px; margin-top: 40px;">
       <h1 style="color: var(--gold); font-size: 32px; margin-bottom: 8px;">KALAKAAR</h1>
       <p style="color: var(--muted);">Where Talent Meets Opportunity</p>
@@ -212,8 +220,12 @@
 
     <div class="separator">OR</div>
 
-    <input type="email" id="magic-email" class="input" placeholder="name@example.com" style="margin-bottom: 8px;">
-    <button class="btn btn-outline" style="margin-bottom: 24px;" onclick="showToast('Magic link sent!')">Send Magic Link</button>
+    <input type="email" id="auth-email" class="input" placeholder="name@example.com" style="margin-bottom: 8px;">
+    <input type="password" id="auth-password" class="input" placeholder="Password" style="margin-bottom: 16px;">
+    <div style="display: flex; gap: 8px; margin-bottom: 24px;">
+      <button class="btn btn-outline" style="flex: 1;" onclick="handleAuth('email-login')">Login</button>
+      <button class="btn btn-outline" style="flex: 1; border-color: var(--gold);" onclick="handleAuth('email-signup')">Sign Up</button>
+    </div>
 
     <button class="btn btn-outline" style="border-color: rgba(212,175,55,0.5);" onclick="navigate('onboarding-guest')">👤 Continue as Guest</button>
   </div>
@@ -450,7 +462,7 @@
 <!-- Firebase Modular SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -470,6 +482,8 @@
   window.firebaseDb = db;
   window.GoogleAuthProvider = GoogleAuthProvider;
   window.signInWithPopup = signInWithPopup;
+  window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+  window.signInWithEmailAndPassword = signInWithEmailAndPassword;
   window.signOut = signOut;
   window.doc = doc;
   window.setDoc = setDoc;
@@ -533,6 +547,9 @@
         console.error("Firestore error:", err);
         navigate('onboarding-creator');
       }
+    } else {
+      // User is fully logged out or initialized
+      navigate('login');
     }
   });
 </script>
@@ -602,7 +619,7 @@
     }
 
     // Manage bottom nav visibility
-    const hideNavScreens = ['login', 'onboarding-creator', 'onboarding-guest', 'post-detail', 'deal-room'];
+    const hideNavScreens = ['loading', 'login', 'onboarding-creator', 'onboarding-guest', 'post-detail', 'deal-room'];
     const bottomNav = document.getElementById('bottom-nav');
     if (bottomNav) {
       if (hideNavScreens.includes(screenId)) {
@@ -632,7 +649,25 @@
         const providerObj = new window.GoogleAuthProvider();
         await window.signInWithPopup(window.firebaseAuth, providerObj);
       } catch (e) {
-        showToast("Error signing in.");
+        showToast("Error signing in with Google.");
+      }
+    } else if (provider === 'email-signup') {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-password').value;
+      if (!email || pass.length < 6) { showToast("Enter valid email and 6+ char password"); return; }
+      try {
+        await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass);
+      } catch (e) {
+        showToast(e.message);
+      }
+    } else if (provider === 'email-login') {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-password').value;
+      if (!email || !pass) { showToast("Enter email and password"); return; }
+      try {
+        await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass);
+      } catch (e) {
+        showToast("Invalid credentials");
       }
     }
   }
