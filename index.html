@@ -199,6 +199,9 @@
     <div style="display: flex; height: 100vh; justify-content: center; align-items: center; flex-direction: column;">
       <h1 style="color: var(--gold); font-size: 32px; margin-bottom: 16px; animation: pulse 1.5s infinite;">KALAKAAR</h1>
       <p style="color: var(--muted);">Loading your stage...</p>
+      <button id="loading-escape-btn" onclick="forceLogout()" style="display:none; margin-top: 32px; background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;">
+        Taking too long? Tap to restart
+      </button>
     </div>
   </div>
 
@@ -497,7 +500,19 @@
     console.log('[DEEPLINK] Captured intended destination:', window.location.hash);
   }
 
+  // ── LOADING SCREEN WATCHDOG ──────────────────────────────────────────────
+  // If onAuthStateChanged never fires (e.g. network timeout), escape after 10s
+  let _authResolved = false;
+  const _authWatchdog = setTimeout(() => {
+    if (!_authResolved) {
+      console.warn('[AUTH] Watchdog: onAuthStateChanged did not resolve in 10s — forcing login screen');
+      navigate('login');
+    }
+  }, 10000);
+
   onAuthStateChanged(auth, async (user) => {
+    _authResolved = true;
+    clearTimeout(_authWatchdog);
     console.log('[AUTH] onAuthStateChanged fired. user:', user?.uid || 'null');
 
     if (user && !window.isGuest) {
@@ -563,6 +578,7 @@
             window.loginSuccess();
           } else {
             console.log('[AUTH] Routing to stage (no deep link)');
+
             window.loginSuccess();
           }
         }
@@ -832,13 +848,38 @@
 
   async function logout() {
     if (!window.isGuest) {
-      await window.signOut(window.firebaseAuth);
+      try { await window.signOut(window.firebaseAuth); } catch(e) {}
     }
     window.isGuest = false;
     window.currentUser = null;
     document.getElementById('bottom-nav').style.display = 'none';
     navigate('login');
   }
+
+  // Emergency escape — clears all state and forces back to login
+  async function forceLogout() {
+    console.warn('[AUTH] forceLogout() called from loading escape hatch');
+    try {
+      if (window.firebaseAuth) await window.signOut(window.firebaseAuth);
+    } catch(e) { console.warn('[AUTH] signOut failed in forceLogout:', e); }
+    localStorage.clear();
+    window.isGuest = false;
+    window.currentUser = null;
+    const bn = document.getElementById('bottom-nav');
+    if (bn) bn.style.display = 'none';
+    navigate('login');
+  }
+  window.forceLogout = forceLogout;
+
+  // Show the escape button on loading screen after 5s
+  setTimeout(() => {
+    const escBtn = document.getElementById('loading-escape-btn');
+    const loadingScreen = document.getElementById('screen-loading');
+    if (escBtn && loadingScreen && loadingScreen.classList.contains('active')) {
+      escBtn.style.display = 'block';
+    }
+  }, 5000);
+
 
   /* MAIN APP LOGIC */
   function switchTab(tab) {
