@@ -455,7 +455,7 @@
 
   const firebaseConfig = {
     apiKey: "AIzaSyCHbiAU4oeP4fHZuH6TSgw8xJLw-aJ9V7A",
-    authDomain: "kalakaar-demo.firebaseapp.com",
+    authDomain: "kalakaar-demo.web.app",
     projectId: "kalakaar-demo",
     storageBucket: "kalakaar-demo.firebasestorage.app",
     messagingSenderId: "512209228672",
@@ -492,29 +492,17 @@
         if (docSnap.exists()) {
           window.currentUser = docSnap.data();
           updateProfileUI();
-          window.loginSuccess();
+          // Fully onboarded user -> Go to main app
+          navigate('stage');
         } else {
           document.getElementById('ob-name').value = user.displayName || "";
+          // New/Returning user with incomplete onboarding
           navigate('onboarding-creator');
-          
-          // Resume onboarding step if saved
-          const savedStep = localStorage.getItem('onboardingStep');
-          if (savedStep === '2') {
-            document.getElementById('onboard-step-1').style.display='none';
-            document.getElementById('onboard-step-2').style.display='block';
-          }
         }
       } catch (err) {
         console.error("Firestore error:", err);
-        // Fallback to onboarding if permission denied or doc doesn't exist
         document.getElementById('ob-name').value = user.displayName || "";
         navigate('onboarding-creator');
-        
-        const savedStep = localStorage.getItem('onboardingStep');
-        if (savedStep === '2') {
-          document.getElementById('onboard-step-1').style.display='none';
-          document.getElementById('onboard-step-2').style.display='block';
-        }
       }
     }
   });
@@ -561,8 +549,28 @@
      UI LOGIC
      ──────────────────────────────────────────────────────────────────────── */
   function navigate(screenId) {
+    // 1. Strict Onboarding Gatekeeper
+    if (window.firebaseAuth && window.firebaseAuth.currentUser && !window.isGuest) {
+      if (!window.currentUser && screenId !== 'onboarding-creator' && screenId !== 'login') {
+        console.warn("Onboarding incomplete. Blocking navigation to " + screenId);
+        screenId = 'onboarding-creator';
+      }
+    }
+
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-' + screenId).classList.add('active');
+
+    // 2. Resume step if navigating to onboarding
+    if (screenId === 'onboarding-creator') {
+      const savedStep = localStorage.getItem('onboardingStep');
+      if (savedStep === '2') {
+        document.getElementById('onboard-step-1').style.display='none';
+        document.getElementById('onboard-step-2').style.display='block';
+      } else {
+        document.getElementById('onboard-step-1').style.display='block';
+        document.getElementById('onboard-step-2').style.display='none';
+      }
+    }
 
     // Manage bottom nav visibility
     const hideNavScreens = ['login', 'onboarding-creator', 'onboarding-guest', 'post-detail', 'deal-room'];
